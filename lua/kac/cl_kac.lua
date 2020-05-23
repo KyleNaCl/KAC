@@ -28,7 +28,7 @@ net.Receive("KAC_Client",function()
 
                 end
             else 
-                if TargetID == LocalPlayer():UserID() then
+                if ply == LocalPlayer() then
                     if string.find(Message, "#") then
                         local A = string.Explode("#", Message)
                         chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," ",Color(255,100,100),A[1],TextCol,A[2])
