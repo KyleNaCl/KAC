@@ -521,14 +521,14 @@ hook.Add("PlayerSay", "Chat_Notification", function(ply, text, isTeam)
                         else
                             printClient(ply:UserID(), -4, "Player Not Found")
                         end
-                    elseif a[2] == "update" then
-                        if ply:IsSuperAdmin() then
-                            printClient(ply:UserID(), -1, "Alert# Initialized Update Process")
-                            kac_update()
-                        else
-                            printClient(ply:UserID(), -4, "Insufficient Permissions")
-                        end
                     end
+                    --elseif a[2] == "update" then
+                    --    if ply:IsSuperAdmin() then
+                    --        printClient(ply:UserID(), -1, "Alert# Initialized Update Process")
+                    --        kac_update()
+                    --    else
+                    --        printClient(ply:UserID(), -4, "Insufficient Permissions")
+                    --    end
                 else
                     printClient(ply:UserID(), -4, "Insufficient Permissions")
                 end
