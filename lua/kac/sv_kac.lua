@@ -191,13 +191,13 @@ hook.Add("PlayerDeath", "Death_Notification", function(victim, inflictor, attack
                     local Driver = inflictor:GetDriver()
                     if IsValid(Driver) then
                         if Driver:IsPlayer() then
-                            if Driver:IsBuild() then
-                                if Driver == attacker then 
-                                    printClient(TargetID, VictimID, "ran over#using '" .. model .. "'")
-                                else 
-                                    printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "'")
-                                end
-                            end
+                            --if Driver:IsBuild() then
+                            --    if Driver == attacker then 
+                            --        printClient(TargetID, VictimID, "ran over#using '" .. model .. "'")
+                            --    else 
+                            --        printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "'")
+                            --    end
+                            --end
                         end
                     else
                         printClient(TargetID, VictimID, "vehicle propkilled killed#using '" .. model .. "'", true)
@@ -223,7 +223,7 @@ hook.Add("PlayerDeath", "Death_Notification", function(victim, inflictor, attack
                     end
                 end
 
-                if attacker:IsBuild() then printClient(TargetID, VictimID, "killed#while in Buildmode") end
+                --if attacker:IsBuild() then printClient(TargetID, VictimID, "killed#while in Buildmode") end
                 if attacker:HasGodMode() then printClient(TargetID, VictimID, "killed#while in Godmode") end
                 if attacker:GetColor()["a"] == 0 then printClient(TargetID, VictimID, "killed#while Invisible") end
             end
