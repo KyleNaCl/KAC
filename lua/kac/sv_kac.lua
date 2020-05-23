@@ -123,7 +123,7 @@ local function checkData(player_)
 end
 
 local function validate(player_, tool)
-    if not KACSettings[tool] then print("[KAC] Error: KACSettings not loaded in validate()") return false end
+    if not KACSettings then print("[KAC] Error: KACSettings not loaded in validate()") return false end
     if not player_ then print("[KAC] Error: Unknown Player in validate() for " .. tool) return false end
     if not tool then print("[KAC] Error: " .. player_:Name() .. ": Unknown Tool in validate()") return false end
     local steamC = checkData(player_)
@@ -144,6 +144,9 @@ end
 
 local function updateTool(player_, tool, trace)
     if not KACSettings then print("[KAC] Error: KACSettings not loaded in updateTool()") return false end
+    
+    if not KACSettings[tool] then return false end
+
     if not player_ then print("[KAC] Error: Unknown Player: Failed updateTool() for " .. tool) return false end
 
     local Tab = validate(player_, tool)
