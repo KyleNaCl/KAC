@@ -189,12 +189,14 @@ hook.Add("PlayerDeath", "Death_Notification", function(victim, inflictor, attack
                     printClient(TargetID, VictimID, "killed#using a pac_projectile", true)
                 elseif inflictor:IsVehicle() then
                     local Driver = inflictor:GetDriver()
-                    if IsValid(Driver) and Driver:IsPlayer() then
-                        if Driver:IsBuild() then
-                            if Driver == attacker then 
-                                printClient(TargetID, VictimID, "ran over#using '" .. model .. "'")
-                            else 
-                                printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "'")
+                    if IsValid(Driver) then
+                        if Driver:IsPlayer() then
+                            if Driver:IsBuild() then
+                                if Driver == attacker then 
+                                    printClient(TargetID, VictimID, "ran over#using '" .. model .. "'")
+                                else 
+                                    printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "'")
+                                end
                             end
                         end
                     else
@@ -221,11 +223,9 @@ hook.Add("PlayerDeath", "Death_Notification", function(victim, inflictor, attack
                     end
                 end
 
-                if attacker:IsPlayer() then
-                    if attacker:IsBuild() then printClient(TargetID, VictimID, "killed#while in Buildmode") end
-                    if attacker:HasGodMode() then printClient(TargetID, VictimID, "killed#while in Godmode") end
-                    if attacker:GetColor()["a"] == 0 then printClient(TargetID, VictimID, "killed#while Invisible") end
-                end
+                if attacker:IsBuild() then printClient(TargetID, VictimID, "killed#while in Buildmode") end
+                if attacker:HasGodMode() then printClient(TargetID, VictimID, "killed#while in Godmode") end
+                if attacker:GetColor()["a"] == 0 then printClient(TargetID, VictimID, "killed#while Invisible") end
             end
         elseif victim and inflictor and not victim:InVehicle() then
             if not inflictor:IsWorld() then 
@@ -520,6 +520,13 @@ hook.Add("PlayerSay", "Chat_Notification", function(ply, text, isTeam)
                             RunConsoleCommand("ulx", "send", ply:Name(), Player(LastTrigger):Name())
                         else
                             printClient(ply:UserID(), -4, "Player Not Found")
+                        end
+                    elseif a[2] == "update" then
+                        if ply:IsSuperAdmin() then
+                            printClient(ply:UserID(), -1, "Alert# Initialized Update Process")
+                            kac_update()
+                        else
+                            printClient(ply:UserID(), -4, "Insufficient Permissions")
                         end
                     end
                 else
