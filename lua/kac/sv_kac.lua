@@ -143,7 +143,7 @@ local function validate(player_, tool)
 end
 
 local function updateTool(player_, tool, trace)
-    if not KACSettings[tool] then print("[KAC] Error: KACSettings not loaded in updateTool()") return false end
+    if not KACSettings then print("[KAC] Error: KACSettings not loaded in updateTool()") return false end
     if not player_ then print("[KAC] Error: Unknown Player: Failed updateTool() for " .. tool) return false end
 
     local Tab = validate(player_, tool)
