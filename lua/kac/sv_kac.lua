@@ -5,12 +5,12 @@ util.AddNetworkString("KAC_Client")
 
 local BHopMaxCVAR = CreateConVar("sv_kac_bhop_max", 10, 128, "max amount of triggers until autoban for bhop scripts", 1 , 30)
 local BHopNotifyIntervalCVAR = CreateConVar("sv_kac_bhop_notify_interval", 3, 128, "amount of triggers until staff get a notify", 1 , 10)
-local CollisionsPenetrateMaxCVAR = CreateConVar("sv_kac_max_penetrate", 5, 128, "max amount of props colliding together before being auto defused", 1, 50)
+local CollisionsPenetrateMaxCVAR = CreateConVar("sv_kac_max_penetrate", 3, 128, "max amount of props colliding together before being auto defused", 1, 50)
 local CollisionsCooldownTimerCVAR = CreateConVar("sv_kac_cooldown_timer", 5, 128, "seconds after prop spawn to check for collisions", 1, 60)
-local CollisionsMinCVAR = CreateConVar("sv_kac_min_collisions", 500, 128, "prop over this amount will recieve a cooldown until they recieve a collisions check", 1, 10000)
+local CollisionsMinCVAR = CreateConVar("sv_kac_min_collisions", 300, 128, "prop over this amount will recieve a cooldown until they recieve a collisions check", 1, 10000)
 local CollisionsMaxCVAR = CreateConVar("sv_kac_max_collisions", 2500, 128, "prop over this amount will always have collisions with props disabled", 1, 10000)
 local FadingDoorPenetrateMax = CreateConVar("sv_kac_max_fading_door_penetrate", 3, 128, "max amount of toggled fading doors penetrating together", 1, 100)
-local PropLooperTimerCVAR = CreateConVar("sv_kac_proplooper_timer", 0.04, 128, "prop checker timer interval", 0.02, 1)
+local PropLooperTimerCVAR = CreateConVar("sv_kac_proplooper_timer", 0.07, 128, "prop checker timer interval", 0.02, 1)
 local VehicleLooperTimerCVAR = CreateConVar("sv_kac_vehiclelooper_timer", 0.3, 128, "vehicle checker timer interval", 0.1, 1)
 local ApprovalTimerCVAR = CreateConVar("sv_kac_approval_timer", 0.1, 128, "time between recursive function calls on prop approval", 0.1, 1)
 
@@ -370,41 +370,49 @@ hook.Add("PlayerSpawnedProp", "SpawnEntity_Notification", function(ply, model, e
     local sid = ply:SteamID()
     local model = returnModel(ent:GetModel())
 
-    ent:SetCollisionGroup(COLLISION_GROUP_NPC_SCRIPTED)
+    local phys = ent:GetPhysicsObject()
+    if not IsValid(phys) then return end
+
+    local IsPene = phys:IsPenetrating()
+    if IsPene then ent:SetCollisionGroup(COLLISION_GROUP_NPC_SCRIPTED) end
+
     local name = tostring(ent) .. "[" .. model .. "]"
 
     if eMeshC < CollisionsMaxCVAR:GetInt() then
-        print2("[KAC] Info: " .. pname .. "<" .. sid .. "> spawned " .. model .. " with " .. eMeshC .. " collisions")
-        timer.Simple(CollisionsCooldownTimerCVAR:GetInt(),function()
-            if not IsValid(ent) then return end
-            if not ply then print2("[KAC] Info: " .. pname .. "<" .. sid .. "> " .. model .. " defusing due to player missing") ent:SetCollisionGroup(COLLISION_GROUP_DEBRIS) ent:GetPhysicsObject():EnableMotion(false) return end
+        if IsPene then
+            print2("[KAC] Info: " .. pname .. "<" .. sid .. "> spawned " .. model .. " with " .. eMeshC .. " collisions while penetrating")
+            timer.Simple(CollisionsCooldownTimerCVAR:GetInt(),function()
+                if not IsValid(ent) then return end
+                if not ply then print2("[KAC] Info: " .. pname .. "<" .. sid .. "> " .. model .. " defusing due to player missing") ent:SetCollisionGroup(COLLISION_GROUP_DEBRIS) ent:GetPhysicsObject():EnableMotion(false) return end
 
-            local group = ent:GetCollisionGroup()
-            if group == COLLISION_GROUP_DEBRIS then
-                --print2("[KAC] Info: " .. pname .. "<" .. sid .. "> " .. name .. " prop is part of defuse") 
-                local valid2, pCount2 = checkPenetrate(ply, ent, COLLISION_GROUP_DEBRIS, CollisionsMinCVAR:GetInt())
-                if not valid2 then
-                    for _,e in ipairs(pCount2) do
-                        e:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
-                        print2("[KAC] Info: " .. pname .. "<" .. sid .. "> " .. tostring(e) .. "[" .. returnModel(e:GetModel()) .."] is colliding with defuse " .. name)
-                    end
-                end
-            else
-                local valid, pCount = checkPenetrate(ply, ent, 0, CollisionsMinCVAR:GetInt())
-                local tc = table.Count(pCount)
-                if not valid and tc > CollisionsPenetrateMaxCVAR:GetInt() then
-                    print2(pname .. "<" .. sid .. "> defusing " .. tc .. " entity collisions on " .. model)
-                    printClient(ply:UserID(), -1, "Alert# Defusing High Collisions [" .. tc .. "][" .. model .."]")
-                    --game.ConsoleCommand("ulx jail \"" .. ply:Name() .. "\" 30\n")
-                    table.insert(pCount, 1, ent)
-                    for _,e in ipairs(pCount) do e:SetCollisionGroup(COLLISION_GROUP_DEBRIS) end
+                local group = ent:GetCollisionGroup()
+                if group == COLLISION_GROUP_DEBRIS then
+                    --print2("[KAC] Info: " .. pname .. "<" .. sid .. "> " .. name .. " prop is part of defuse") 
+                    --local valid2, pCount2 = checkPenetrate(ply, ent, COLLISION_GROUP_DEBRIS, CollisionsMinCVAR:GetInt())
+                    --if not valid2 then
+                    --    for _,e in ipairs(pCount2) do
+                    --        e:SetCollisionGroup(COLLISION_GROUP_DEBRIS)
+                    --        print2("[KAC] Info: " .. pname .. "<" .. sid .. "> " .. tostring(e) .. "[" .. returnModel(e:GetModel()) .."] is colliding with defuse " .. name)
+                    --    end
+                    --end
                 else
-                    if ent:GetCollisionGroup() == COLLISION_GROUP_NPC_SCRIPTED then ent:SetCollisionGroup(COLLISION_GROUP_NONE) end
-                    --print2(pname .. "<" .. sid .. "> " .. name .. " verified")
-                end 
-            end
-        end)
+                    local valid, pCount = checkPenetrate(ply, ent, 0, CollisionsMinCVAR:GetInt())
+                    local tc = table.Count(pCount)
+                    if not valid and tc > CollisionsPenetrateMaxCVAR:GetInt() then
+                        print2(pname .. "<" .. sid .. "> defusing " .. tc .. " entity collisions on " .. model)
+                        printClient(ply:UserID(), -1, "Alert# Defusing High Collisions [" .. tc .. "][" .. model .."]")
+                        --game.ConsoleCommand("ulx jail \"" .. ply:Name() .. "\" 30\n")
+                        table.insert(pCount, 1, ent)
+                        for _,e in ipairs(pCount) do e:SetCollisionGroup(COLLISION_GROUP_DEBRIS) end
+                    else
+                        if ent:GetCollisionGroup() == COLLISION_GROUP_NPC_SCRIPTED then ent:SetCollisionGroup(COLLISION_GROUP_NONE) end
+                        --print2(pname .. "<" .. sid .. "> " .. name .. " verified")
+                    end 
+                end
+            end)
+        end
     else
+        ent:SetCollisionGroup(COLLISION_GROUP_NPC_SCRIPTED)
         print2("[KAC] Info: " .. pname .. "<" .. sid .. "> spawned " .. model .. " with " .. eMeshC .. " collisions")
     end
 end)
@@ -494,35 +502,35 @@ local function loopProps()
         if IsValid(ent:GetParent()) then return end
         if (CurTime() - ent:GetCreationTime()) < CollisionsCooldownTimerCVAR:GetInt() then return end
 
+        local o = owner(ent)
+        if not o or not o:IsPlayer() then return end
+
         local col = collisionCount(ent)
-        if col > CollisionsMaxCVAR:GetInt() then
+        if col >= CollisionsMaxCVAR:GetInt() then
 
             local group = ent:GetCollisionGroup()
-            if group == COLLISION_GROUP_DEBRIS or group == COLLISION_GROUP_NPC_SCRIPTED then return end
-            ent:SetCollisionGroup(COLLISION_GROUP_NPC_SCRIPTED)
+            if group == COLLISION_GROUP_DEBRIS or group == COLLISION_GROUP_NPC_SCRIPTED or group == COLLISION_GROUP_PLAYER then return end
 
-            local o = owner(ent)
-            if not o or not o:IsPlayer() then return end
+            ent:SetCollisionGroup(COLLISION_GROUP_NPC_SCRIPTED)
 
             local model = returnModel(ent:GetModel())
             print2("[KAC] Info: " .. o:Name() .. "<" .. o:SteamID() .. "> denied collision change on '" .. model .. "''")
             printClient(o:UserID(), -1, "Denied Collision change on '" .. model .. "'")
 
-        elseif col > CollisionsMinCVAR:GetInt() then
-
-            local o = owner(ent)
-            if not o or not o:IsPlayer() then return end
+        elseif col >= CollisionsMinCVAR:GetInt() then
 
             local phys = ent:GetPhysicsObject()
-            if not IsValid(phys) then return end
-            if not phys:IsPenetrating() then return end
-
             local group = ent:GetCollisionGroup()
+
+            if not IsValid(phys) then return end
+            if not phys:IsPenetrating() and group == COLLISION_GROUP_NONE then return end
+
             if group == COLLISION_GROUP_DEBRIS or group == COLLISION_GROUP_NPC_SCRIPTED or group == COLLISION_GROUP_PLAYER then return end
 
             local valid, pCount = checkPenetrate(ply, ent, 0, CollisionsMinCVAR:GetInt())
             local tc1 = table.Count(pCount)
             if valid or tc1 == 0 or tc1 < CollisionsPenetrateMaxCVAR:GetInt() then return end
+
             local pCount2 = {}
             for _,e in ipairs(pCount) do
                 local g = e:GetCollisionGroup()
