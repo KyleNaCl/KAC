@@ -10,8 +10,8 @@ local CollisionsCooldownTimerCVAR = CreateConVar("sv_kac_cooldown_timer", 5, 128
 local CollisionsMinCVAR = CreateConVar("sv_kac_min_collisions", 500, 128, "prop over this amount will recieve a cooldown until they recieve a collisions check", 1, 10000)
 local CollisionsMaxCVAR = CreateConVar("sv_kac_max_collisions", 2500, 128, "prop over this amount will always have collisions with props disabled", 1, 10000)
 local FadingDoorPenetrateMax = CreateConVar("sv_kac_max_fading_door_penetrate", 3, 128, "max amount of toggled fading doors penetrating together", 1, 100)
-local PropLooperTimerCVAR = CreateConVar("sv_kac_proplooper_timer", 0.04, 128, "time between recursive function calls on prop approval", 0.02, 1)
-local VehicleLooperTimerCVAR = CreateConVar("sv_kac_vehiclelooper_timer", 0.3, 128, "time between recursive function calls on prop approval", 0.1, 1)
+local PropLooperTimerCVAR = CreateConVar("sv_kac_proplooper_timer", 0.04, 128, "prop checker timer interval", 0.02, 1)
+local VehicleLooperTimerCVAR = CreateConVar("sv_kac_vehiclelooper_timer", 0.3, 128, "vehicle checker timer interval", 0.1, 1)
 local ApprovalTimerCVAR = CreateConVar("sv_kac_approval_timer", 0.1, 128, "time between recursive function calls on prop approval", 0.1, 1)
 
 local Data = {}
