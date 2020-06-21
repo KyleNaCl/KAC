@@ -281,9 +281,6 @@ end)
 hook.Add("PlayerAuthed", "KAC_Auth", function(ply, steamid, uniqueid)
     local name = ply:Name()
     KAC.print2("[KAC] Info: " .. ply:Name() .. " <" .. steamid .. "><" .. ply:IPAddress() .. "> connected to the server")
-    if name then
-        game.KickID(steamid)
-    end
 end)
 
 local function collisionCount(ent)
