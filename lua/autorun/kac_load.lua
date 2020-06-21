@@ -45,7 +45,7 @@ KACSettings = {
     	isTool = true
     },
     collisions = {
-    	update = 3, 
+    	update = 1, 
     	threshold = 5, 
     	requireTrace = false,
     	isTool = false
@@ -55,12 +55,16 @@ KACSettings = {
 -----Loads-----
 
 if SERVER then
+	print("[KAC] ======Initalize Server======")
 	include("kac/sv_kac.lua")
+	include("kac/sv_kac_ac.lua")
 	AddCSLuaFile("kac/cl_kac.lua")
-
+	print("[KAC] ============================")
 	if ULib ~= nil then
 		ULib.ucl.registerAccess("kac_notify", {"admin", "superadmin"}, "Allows users to see KAC notifications", "")
 	end
 elseif CLIENT then
+	print("[KAC] ======Initalize Client======")
 	include("kac/cl_kac.lua")
+	print("[KAC] ============================")
 end
