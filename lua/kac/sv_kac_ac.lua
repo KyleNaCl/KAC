@@ -44,7 +44,8 @@ end
 
 hook.Add("OnPlayerHitGround", "KAC_Ground", function(ply, inWater, onFloater, speed)
     local steamC = KAC.checkData(ply)
-    if not ply or not ply:Alive() or inWater or onFloater then return end
+    if not ply or inWater or onFloater then return end
+    if not ply:Alive() or ply:GetMoveType() == MOVETYPE_NOCLIP then return end
 
     local isJump = KAC[steamC].button.jump
     if isJump == 1 then
@@ -84,31 +85,80 @@ hook.Add("Tick","KAC_Tick",function()
     end
 end)
 
+util.AddNetworkString("KAC_Debug_Print")
+
+local function paint(ply, vec)
+    net.Start("KAC_Debug_Print")
+        net.WriteVector(vec)
+    net.Send(ply)
+end
+
 hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
+
     local ply = dmg:GetAttacker()
 
-    if ply:Health() > 0 and ply:IsPlayer() and dmg:IsBulletDamage() then
-        local steamC = KAC.checkData(ply)
+    if not dmg:IsBulletDamage() then return end
+    if not IsValid(ply) or not IsValid(ent) then return end
+    if not ply:IsPlayer() or not ent:IsPlayer() then return end
+    if not ent:Alive() or not ply:Alive() then return end
+    if ply:IsTimingOut() or ply:InVehicle() then return end
 
-        if steamC then
-            local infl = dmg:GetInflictor()
-            if infl:IsPlayer() then
-                infl = infl:GetActiveWeapon()
-                if infl:IsWeapon() then
-                    if KAC[steamC].button["attack"] == -1 and CurTime() - KAC[steamC].button["attackpre"] > engine.TickInterval() * 10 then
-                        KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Auto Shoot Detected")
-                    end
+    local steamC = KAC.checkData(ply)
+
+    if steamC then
+        local Min, Max = ent:GetCollisionBounds()
+        local H = Max[3] - Min[3]
+        --local infl = dmg:GetInflictor()
+        --if infl:IsPlayer() then
+        --    infl = infl:GetActiveWeapon()
+        --    if infl:IsWeapon() then
+        --        if KAC[steamC].button["attack"] == -1 and CurTime() - KAC[steamC].button["attackpre"] > engine.TickInterval() * 10 then
+        --            KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Auto Shoot Detected")
+        --        end
+        --    end
+        --end
+
+        local PAng = KAC[steamC].eyea
+
+        local P = math.abs(math.Round(subT(ply:EyeAngles().p,PAng.p),2))
+        local Y = math.abs(math.Round(subT(ply:EyeAngles().y,PAng.y),2))
+
+        local Start = ply:GetShootPos()
+        local End = dmg:GetDamagePosition()
+        local Dist = Start:Distance(End)
+        local Dir = (End - Start):GetNormalized()
+
+        if Dist > 150 then
+            --local Range = 10000 / Dist
+            local Range = math.Clamp(H / (Dist / 300),5,180)
+
+            --print(Dist .. " | " .. Range)
+
+            local Trace = ply:GetEyeTrace()
+            local BTrace = util.TraceLine({start = End + (Dir * -10), endpos = End + (Dir * 10), filter = ply, ignoreworld = true})
+            --local WTrace = util.TraceLine({start = Start, endpos = End + (Dir * 10), filter = ply})
+
+            --PrintTable(WTrace)
+
+            --paint(ply, BTrace.HitPos)
+            --paint(ply, WTrace.HitPos)
+
+            --if WTrace.HitWorld then
+                --ply:ChatPrint("Wallbang World")
+            --elseif IsValid(WTrace.Entity) and WTrace.Entity != ent then
+                --ply:ChatPrint("Wallbang Prop")
+            --end
+
+            if ent:HasGodMode() or KAC.InBuild(ent) then
+                KAC[steamC].hitshot = KAC[steamC].hitshot + 1
+                if BTrace.HitGroup == HITGROUP_HEAD then
+                    KAC[steamC].headshot = KAC[steamC].headshot + 1
+                    --ply:ChatPrint("Headshot")
                 end
             end
 
-            local PAng = KAC[steamC].eyea
-
-            local P = math.abs(math.Round(subT(ply:EyeAngles().p,PAng.p),2))
-            local Y = math.abs(math.Round(subT(ply:EyeAngles().y,PAng.y),2))
-
-            local Range = 5000 / (dmg:GetDamagePosition():Distance(ply:GetShootPos()))
-
             if P > Range or Y > Range then
+
                 timer.Simple(engine.TickInterval() * SilentIntervalCVAR:GetInt(),function()
                     local P2 = math.abs(math.Round(subT(ply:EyeAngles().p,PAng.p),2))
                     local Y2 = math.abs(math.Round(subT(ply:EyeAngles().y,PAng.y),2))
@@ -118,7 +168,7 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
                         KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Silent Aim Detected")
                     end
                 end)
-                KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Snap Detected p[" .. P .. "] y[" .. Y .. "]")
+                KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Snap Detected d[" .. math.Round(Dist * 0.0625) .. "] p[" .. math.Round(P) .. "] y[" .. math.Round(Y) .. "]")
             end
         end
     end
