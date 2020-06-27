@@ -225,9 +225,11 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                 local steamC = KAC.checkData(attacker)
                 KAC[steamC].kill = KAC[steamC].kill + 1
                 if KAC[steamC].kill >= 10 then
-                    local Div = math.Round(KAC[steamC].headshot / KAC[steamC].hitshot, 2)
-                    if Div > 0.90 then
-                        KAC.printClient(TargetID, -1, "Anti-Cheat# High Accuracy Over 10 Kills: " .. (Div * 100) .. "%")
+                    if KAC[steamC].headshot != 0 and KAC[steamC].hitshot != 0 then
+                        local Div = math.Round(KAC[steamC].headshot / KAC[steamC].hitshot, 2)
+                        if Div > 0.90 then
+                            KAC.printClient(TargetID, -1, "Anti-Cheat# " . (Div * 100). .. "% Accuracy Over 10 Kills")
+                        end
                     end
                     KAC[steamC].kill = 0
                     KAC[steamC].hitshot = 0
