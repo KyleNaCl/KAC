@@ -1,5 +1,5 @@
 
-print("[KAC] Initialized Clientside")
+print("[KAC] \tLoaded cl_kac.lua")
 
 net.Receive("KAC_Client",function()
 
@@ -28,20 +28,11 @@ net.Receive("KAC_Client",function()
 
                 end
             else 
-                if ply == LocalPlayer() then
-                    if string.find(Message, "#") then
-                        local A = string.Explode("#", Message)
-                        chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," ",Color(255,100,100),A[1],TextCol,A[2])
-                    else
-                        chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," " .. Message)
-                    end
+                if string.find(Message, "#") then
+                    local A = string.Explode("#", Message)
+                    chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," ",team.GetColor(ply:Team()),name,TextCol," ",Color(255,100,100),A[1],TextCol,A[2])
                 else
-                    if string.find(Message, "#") then
-                        local A = string.Explode("#", Message)
-                        chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," ",team.GetColor(ply:Team()),name,TextCol," ",Color(255,100,100),A[1],TextCol,A[2])
-                    else
-                        chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," ",team.GetColor(ply:Team()),name,TextCol," " .. Message)
-                    end
+                    chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"]",TextCol," ",team.GetColor(ply:Team()),name,TextCol," " .. Message)
                 end
             end
         end
@@ -56,6 +47,29 @@ net.Receive("KAC_Client",function()
             end
         else
             chat.AddText(TextSep,"[",KACCol,"KAC",TextSep,"] ",TextCol,Message)
+        end
+    end
+end)
+
+local Display = {}
+
+net.Receive("KAC_Debug_Print",function()
+    table.insert(Display, 1, {time = 50, vector = net.ReadVector()})
+end)
+
+hook.Add("PostDrawTranslucentRenderables", "KAC_Debug", function(ply)
+    if Display != nil then
+        for k, tab in pairs(Display) do
+            if tab.time > 0 then
+                if k % 2 == 0 then
+                    render.DrawWireframeBox(tab.vector, Angle(), Vector(-5,-5,-5), Vector(5,5,5), {color = Color(50,255,50)})
+                else
+                    render.DrawWireframeBox(tab.vector, Angle(), Vector(-2,-2,-2), Vector(2,2,2), {color = Color(50,255,50)})
+                end
+                tab.time = tab.time - engine.TickInterval()
+            else
+                table.remove(Display, k)
+            end
         end
     end
 end)
