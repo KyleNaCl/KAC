@@ -70,11 +70,10 @@ local function isOwner(ply, ent)
     return ply == KAC.owner(ent)
 end
 
-function PMT:IsBuild()
-    local ply = self
-    local co = KAC.owner(ply)
-    if co:IsPlayer() then ply = co end
+function KAC.InBuild(ply)
     if not IsValid(ply) then return false end
+    local co = KAC.owner(ply)
+    if IsValid(co) and co:IsPlayer() then ply = co end
     if not ply:IsPlayer() then return false end
     if ply.isBuild then return ply:isBuild() end
     return false
@@ -140,7 +139,7 @@ function KAC.checkData(player_)
     local steamC = steam(player_)
     if not steamC then KAC.print2("[KAC] Error: steam() retuned nil in checkData() for " .. player_:Name()) return false end
     if not KAC[steamC] then
-        KAC[steamC] = { valid = true, bhop = 0, button = { jump = -1 }, eyea = Angle() }
+        KAC[steamC] = { valid = true, button = { jump = -1 }, eyea = Angle(), bhop = 0, headshot = 0, hitshot = 0, kill = 0 }
         KAC.print2("[KAC] Info: Creating: " .. player_:Name() .. ": Main Data table")
     end
     return steamC
@@ -223,6 +222,18 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                 local VictimID = victim:UserID()
                 local model = returnModel(inflictor:GetModel())
 
+                local steamC = KAC.checkData(attacker)
+                KAC[steamC].kill = KAC[steamC].kill + 1
+                if KAC[steamC].kill >= 10 then
+                    local Div = math.Round(KAC[steamC].headshot / KAC[steamC].hitshot, 2)
+                    if Div > 0.90 then
+                        KAC.printClient(TargetID, -1, "Anti-Cheat# High Accuracy Over 10 Kills: " .. (Div * 100) .. "%")
+                    end
+                    KAC[steamC].kill = 0
+                    KAC[steamC].hitshot = 0
+                    KAC[steamC].headshot = 0
+                end
+
                 if Weap == "pac_projectile" then
                     KAC.printClient(TargetID, VictimID, "killed#using a pac_projectile", true)
                 elseif inflictor:IsVehicle() then
@@ -261,7 +272,7 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                     end
                 end
 
-                --if attacker:IsBuild() then KAC.printClient(TargetID, VictimID, "killed#while in Buildmode") end
+                if KAC.InBuild(attacker) then KAC.printClient(TargetID, VictimID, "killed#while in Buildmode", true) end
                 if attacker:HasGodMode() then KAC.printClient(TargetID, VictimID, "killed#while in Godmode") end
                 if attacker:GetColor()["a"] == 0 then KAC.printClient(TargetID, VictimID, "killed#while Invisible") end
             end
@@ -568,13 +579,9 @@ local function rec(admin, ply)
    if max > 0 then
         local ent = Unlock[1]
         if IsValid(ent) then
-            local col = collisionCount(ent)
-            if col > CollisionsMinCVAR:GetInt() and col < CollisionsMaxCVAR:GetInt() then
-                local c = ent:GetCollisionGroup()
-                if c == COLLISION_GROUP_NPC_SCRIPTED or c == COLLISION_GROUP_DEBRIS then
-                    ent:SetCollisionGroup(COLLISION_GROUP_PLAYER)
-                    KAC.print2("[KAC] Info: " .. Player(UnlockAdmin):Name() .. " approving [" .. tostring(ent) .. "] for " .. Player(UnlockTarget):Name())
-                end
+            if c == COLLISION_GROUP_NPC_SCRIPTED or c == COLLISION_GROUP_DEBRIS then
+                ent:SetCollisionGroup(COLLISION_GROUP_PLAYER)
+                KAC.print2("[KAC] Info: " .. Player(UnlockAdmin):Name() .. " approving [" .. tostring(ent) .. "] for " .. Player(UnlockTarget):Name())
             end
         end
         table.remove(Unlock, 1)
