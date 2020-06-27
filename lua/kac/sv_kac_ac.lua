@@ -101,7 +101,10 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
     if not IsValid(ply) or not IsValid(ent) then return end
     if not ply:IsPlayer() or not ent:IsPlayer() then return end
     if not ent:Alive() or not ply:Alive() then return end
-    if ply:IsTimingOut() or ply:InVehicle() then return end
+    if ply:IsTimingOut() or ent:IsTimingOut() then return end
+    if ply:InVehicle() or ent:InVehicle() then return end
+    if ply:HasGodMode() or ent:HasGodMode() then return end
+    if KAC.InBuild(ply) or KAC.InBuild(ent) then return end
 
     local steamC = KAC.checkData(ply)
 
@@ -149,12 +152,10 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
                 --ply:ChatPrint("Wallbang Prop")
             --end
 
-            if ent:HasGodMode() or KAC.InBuild(ent) then
-                KAC[steamC].hitshot = KAC[steamC].hitshot + 1
-                if BTrace.HitGroup == HITGROUP_HEAD then
-                    KAC[steamC].headshot = KAC[steamC].headshot + 1
-                    --ply:ChatPrint("Headshot")
-                end
+            KAC[steamC].hitshot = KAC[steamC].hitshot + 1
+            if BTrace.HitGroup == HITGROUP_HEAD then
+                KAC[steamC].headshot = KAC[steamC].headshot + 1
+                --ply:ChatPrint("Headshot")
             end
 
             if P > Range or Y > Range then
