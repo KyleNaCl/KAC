@@ -50,26 +50,3 @@ net.Receive("KAC_Client",function()
         end
     end
 end)
-
-local Display = {}
-
-net.Receive("KAC_Debug_Print",function()
-    table.insert(Display, 1, {time = 50, vector = net.ReadVector()})
-end)
-
-hook.Add("PostDrawTranslucentRenderables", "KAC_Debug", function(ply)
-    if Display != nil then
-        for k, tab in pairs(Display) do
-            if tab.time > 0 then
-                if k % 2 == 0 then
-                    render.DrawWireframeBox(tab.vector, Angle(), Vector(-5,-5,-5), Vector(5,5,5), {color = Color(50,255,50)})
-                else
-                    render.DrawWireframeBox(tab.vector, Angle(), Vector(-2,-2,-2), Vector(2,2,2), {color = Color(50,255,50)})
-                end
-                tab.time = tab.time - engine.TickInterval()
-            else
-                table.remove(Display, k)
-            end
-        end
-    end
-end)
