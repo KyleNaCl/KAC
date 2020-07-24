@@ -32,8 +32,6 @@ local Explosives = {
     models_chippy_f86_bomb_mdl = 1
 }
 
-local PMT = FindMetaTable("Player")
-
 function KAC.owner(entity) -- Function Used From Wiremod Source --
     if entity == nil then return end
     if entity.GetPlayer then
@@ -139,7 +137,7 @@ function KAC.checkData(player_)
     local steamC = steam(player_)
     if not steamC then KAC.print2("[KAC] Error: steam() retuned nil in checkData() for " .. player_:Name()) return false end
     if not KAC[steamC] then
-        KAC[steamC] = { valid = true, button = { jump = -1 }, eyea = Angle(), bhop = 0, headshot = 0, hitshot = 0, kill = 0 }
+        KAC[steamC] = { valid = true, button = { jump = -1 }, eyea = Angle(), bhop = 0, ground = false, headshot = 0, hitshot = 0, kill = 0, antispam = 0 }
         KAC.print2("[KAC] Info: Creating: " .. player_:Name() .. ": Main Data table")
     end
     return steamC
@@ -228,7 +226,7 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                     if KAC[steamC].headshot != 0 and KAC[steamC].hitshot != 0 then
                         local Div = math.Round(KAC[steamC].headshot / KAC[steamC].hitshot, 2)
                         if Div > 0.90 then
-                            KAC.printClient(TargetID, -1, "Anti-Cheat# " . (Div * 100). .. "% Accuracy Over 10 Kills")
+                            KAC.printClient(TargetID, -1, "Anti-Cheat# " .. (Div * 100) .. "% Headshot Accuracy Over 10 Kills")
                         end
                     end
                     KAC[steamC].kill = 0
@@ -236,19 +234,21 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                     KAC[steamC].headshot = 0
                 end
 
+                local HideBuild = false
                 if Weap == "pac_projectile" then
                     KAC.printClient(TargetID, VictimID, "killed#using a pac_projectile", true)
                 elseif inflictor:IsVehicle() then
                     local Driver = inflictor:GetDriver()
                     if IsValid(Driver) then
                         if Driver:IsPlayer() then
-                            --if Driver:IsBuild() then
-                            --    if Driver == attacker then 
-                            --        KAC.printClient(TargetID, VictimID, "ran over#using '" .. model .. "'")
-                            --    else 
-                            --        KAC.printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "'")
-                            --    end
-                            --end
+                            if KAC.InBuild(Driver) then
+                                HideBuild = true
+                                if Driver == attacker then 
+                                    KAC.printClient(TargetID, VictimID, "ran over#using '" .. model .. "' while in Buildmode")
+                                else 
+                                    KAC.printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "' while in Buildmode")
+                                end
+                            end
                         end
                     else
                         KAC.printClient(TargetID, VictimID, "vehicle propkilled killed#using '" .. model .. "'", true)
@@ -257,7 +257,7 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                     local Type = "propkilled"
                     local Explosive = Explosives[string.Replace(string.Replace(string.Replace(inflictor:GetModel(),".","_"),"-","_"),"/","_")] == 1
                     if Explosive then Type = "explosive killed" end
-                    KAC.printClient(TargetID, VictimID, Type .. "#using '" .. model .. "'", true)
+                    KAC.printClient(TargetID, VictimID, Type .. "#using '" .. model .. "'", not Explosive)
                 end
 
                 if attacker:InVehicle() then
@@ -274,7 +274,7 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                     end
                 end
 
-                if KAC.InBuild(attacker) then KAC.printClient(TargetID, VictimID, "killed#while in Buildmode", true) end
+                if KAC.InBuild(attacker) and not HideBuild then KAC.printClient(TargetID, VictimID, "killed#while in Buildmode", true) end
                 if attacker:HasGodMode() then KAC.printClient(TargetID, VictimID, "killed#while in Godmode") end
                 if attacker:GetColor()["a"] == 0 then KAC.printClient(TargetID, VictimID, "killed#while Invisible") end
             end
@@ -443,6 +443,7 @@ hook.Add("PlayerSpawnedProp", "KAC_SpawnProp", function(ply, model, ent)
 
     local eMeshC = collisionCount(ent)
     if eMeshC == 0 or eMeshC < CollisionsMinCVAR:GetInt() then return end
+    if IsValid(ent:GetParent()) then return end
 
     local pname = ply:Name()
     local sid = ply:SteamID()
@@ -514,7 +515,7 @@ local function loopProps()
         if col >= CollisionsMaxCVAR:GetInt() then
 
             local group = ent:GetCollisionGroup()
-            if group == COLLISION_GROUP_DEBRIS or group == COLLISION_GROUP_NPC_SCRIPTED or group == COLLISION_GROUP_PLAYER then return end
+            if group == COLLISION_GROUP_NPC_SCRIPTED or group == COLLISION_GROUP_PLAYER then return end
 
             ent:SetCollisionGroup(COLLISION_GROUP_NPC_SCRIPTED)
 
@@ -525,7 +526,7 @@ local function loopProps()
 
             local group = ent:GetCollisionGroup()
 
-            if group == COLLISION_GROUP_DEBRIS or group == COLLISION_GROUP_NPC_SCRIPTED or group == COLLISION_GROUP_PLAYER then return end
+            if group == COLLISION_GROUP_NPC_SCRIPTED or group == COLLISION_GROUP_PLAYER then return end
 
             local IsPene, Ent1, Ent2 = checkPenetrate2(o, ent)
 
@@ -581,7 +582,7 @@ local function rec(admin, ply)
    if max > 0 then
         local ent = Unlock[1]
         if IsValid(ent) then
-            if c == COLLISION_GROUP_NPC_SCRIPTED or c == COLLISION_GROUP_DEBRIS then
+            if c == COLLISION_GROUP_NPC_SCRIPTED then
                 ent:SetCollisionGroup(COLLISION_GROUP_PLAYER)
                 KAC.print2("[KAC] Info: " .. Player(UnlockAdmin):Name() .. " approving [" .. tostring(ent) .. "] for " .. Player(UnlockTarget):Name())
             end
