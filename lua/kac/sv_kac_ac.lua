@@ -1,15 +1,15 @@
 
 print("[KAC] \tLoaded sv_kac_ac.lua")
 
-KAC.Triggers = {
+KACTriggers = {
     aimbot = {
         threshold = 10,
-        delta = 0.05,
+        delta = 0.005,
         desc = "Aimbot"
     },
     bhop = {
-        threshold = 20,
-        delta = 0.05,
+        threshold = 5,
+        delta = 0.005,
         desc = "BHOP Scripts"
     },
     autoshoot = {
@@ -24,12 +24,14 @@ local function checkType(ply, type_)
     if steamC then
         if not steamC then KAC.print2("[KAC] Error: steamC is null in checkType()") return end
         if not type_ then KAC.print2("[KAC] Error: type_ is null in checkType()") return end
-        if KAC.Triggers[type_][steamC] == nil then return end
-        if KAC.Triggers[type_][steamC] > 0 then 
-            KAC.Triggers[type_][steamC] = KAC.Triggers[type_][steamC] - KAC.Triggers[type_]["delta"]
-            if KAC.Triggers[type_][steamC] <= 0 then 
-                KAC.Triggers[type_][steamC] = 0
-                if KAC.Triggers[type_].threshold != -1 then
+        if KACTriggers == nil then return end
+        if KACTriggers[type_] == nil then return end
+        if KACTriggers[type_][steamC] == nil then return end
+        if KACTriggers[type_][steamC] > 0 then 
+            KACTriggers[type_][steamC] = KACTriggers[type_][steamC] - KACTriggers[type_]["delta"]
+            if KACTriggers[type_][steamC] <= 0 then 
+                KACTriggers[type_][steamC] = 0
+                if KACTriggers[type_].threshold != -1 then
                     KAC.print2("[KAC] Info: " .. ply:Name() .. "<" .. ply:SteamID() .. "> " .. type_ .. " delta zero'd")
                 end
             end
@@ -45,6 +47,26 @@ local function loopDelta()
             checkType(ply,"bhop")
             checkType(ply,"autoshoot")
         end
+        if not FindMetaTable("Player").isBuild then
+            weapon = ply:GetActiveWeapon()
+            if IsValid(weapon) then
+
+                local maxClip = weapon:GetMaxClip1()
+                local primAmmoType = weapon:GetPrimaryAmmoType()
+
+                if maxClip == -1 then
+                    maxClip = 100
+                end
+
+                if maxClip <= 0 and primAmmoType ~= -1 then
+                    maxClip = 1
+                end
+
+                if primAmmoType ~= -1 then
+                    ply:SetAmmo( maxClip, primAmmoType, true)
+                end
+            end
+        end
     end
 end
 timer.Create("KAC_TriggerDelta", 1, 0, loopDelta)
@@ -52,23 +74,23 @@ timer.Create("KAC_TriggerDelta", 1, 0, loopDelta)
 local function pushTrigger(ply, type_, amount)
     local steamC = KAC.checkData(ply)
     if steamC then
-        if KAC.Triggers[type_][steamC] == nil then KAC.Triggers[type_][steamC] = 0 end
-        if KAC.Triggers[type_].threshold == -1 then
-            KAC.Triggers[type_][steamC] = amount
+        if KACTriggers[type_][steamC] == nil then KACTriggers[type_][steamC] = 0 end
+        if KACTriggers[type_].threshold == -1 then
+            KACTriggers[type_][steamC] = amount
         else
-            KAC.Triggers[type_][steamC] = KAC.Triggers[type_][steamC] + amount
-            if KAC.Triggers[type_][steamC] >= KAC.Triggers[type_].threshold then
-                KAC.print2("[KAC] Info: " .. ply:Name() .. "<" .. ply:SteamID() .. "> banning for " .. KAC.Triggers[type_].desc)
-                KAC.printClient(ply:UserID(), -3, "Anti-Cheat# Banned For " .. KAC.Triggers[type_].desc)
-                KAC.Triggers[type_][steamC] = 0
+            KACTriggers[type_][steamC] = KACTriggers[type_][steamC] + amount
+            if KACTriggers[type_][steamC] >= KACTriggers[type_].threshold then
+                KAC.print2("[KAC] Info: " .. ply:Name() .. "<" .. ply:SteamID() .. "> banning for " .. KACTriggers[type_].desc)
+                KAC.printClient(ply:UserID(), -3, "Anti-Cheat# Banned For " .. KACTriggers[type_].desc)
+                KACTriggers[type_][steamC] = 0
                 if not ply:IsListenServerHost() then
                     ply:Lock()
                     timer.Simple(1, function() 
-                        RunConsoleCommand("ulx", "ban", ply:Nick(), 0, KAC.Triggers[type_].desc .. " [Banned By: KAC]")
+                        RunConsoleCommand("ulx", "ban", ply:Nick(), 0, KACTriggers[type_].desc .. " [Banned By: KAC]")
                     end)
                 end
             else
-                KAC.print2("[KAC] Info: " .. ply:Name() .. "<" .. ply:SteamID() .. "> " .. type_ .. " [" .. KAC.Triggers[type_][steamC] .. " / " .. KAC.Triggers[type_].threshold .. "]")
+                KAC.print2("[KAC] Info: " .. ply:Name() .. "<" .. ply:SteamID() .. "> " .. type_ .. " [" .. KACTriggers[type_][steamC] .. " / " .. KACTriggers[type_].threshold .. "]")
             end
         end
     end
@@ -82,9 +104,6 @@ timer.Simple(5,function() -- Wait for WireLib to be mounted
                 local steamC = KAC.checkData(ply)
                 if steamC then
                     KAC[steamC].button[binding] = 1
-                    if binding == "attack" then
-                        pushTrigger(ply, "autoshoot", 5)
-                    end
                 end
             end
         end)
@@ -137,6 +156,16 @@ hook.Add("Tick","KAC_Tick",function()
     end
 end)
 
+hook.Add("EntityFireBullets", "KAC_Bullet", function(ent, dataTab)
+    local ply = dataTab["Attacker"]
+    local steamC = KAC.checkData(ply)
+    if KAC[steamC] and ply:Alive() then
+        if KAC[steamC].button["attack"] == 0 and ply:GetActiveWeapon():GetClass() != "weapon_shotgun" then
+            pushTrigger(ply, "autoshoot", 3)
+        end
+    end
+end)
+
 hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
 
     if not dmg:IsBulletDamage() then return end
@@ -163,9 +192,9 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
         if infl:IsPlayer() then
             infl = infl:GetActiveWeapon()
             if infl:IsWeapon() then
-                if KAC[steamC].button["attack"] == -1 and KAC.Triggers["autoshoot"][steamC] == 0 then
+                if KAC[steamC].button["attack"] == -1 and KACTriggers["autoshoot"][steamC] == 0 then
                     KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Detected Autoshoot")
-                    //pushTrigger(ply, "aimbot", 1)
+                    pushTrigger(ply, "aimbot", 1)
                 end
             end
         end
@@ -180,24 +209,12 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
         local End = dmg:GetDamagePosition()
         local Dist = Start:Distance(End)
         local Dir = (End - Start):GetNormalized()
+        local Ang = Dir:Angle()
 
-        if Dist > 150 then
+        if Dist > 20 then
             local Range = math.Clamp(H / (Dist / 200),1.5,180)
             
-            local Trace = ply:GetEyeTrace()
             local BTrace = util.TraceLine({start = End + (Dir * -10), endpos = End + (Dir * 10), filter = ply, ignoreworld = true})
-            --local WTrace = util.TraceLine({start = Start, endpos = End + (Dir * 10), filter = ply})
-
-            --PrintTable(WTrace)
-
-            --paint(ply, BTrace.HitPos)
-            --paint(ply, WTrace.HitPos)
-
-            --if WTrace.HitWorld then
-                --ply:ChatPrint("Wallbang World")
-            --elseif IsValid(WTrace.Entity) and WTrace.Entity != ent then
-                --ply:ChatPrint("Wallbang Prop")
-            --end
 
             KAC[steamC].hitshot = KAC[steamC].hitshot + 1
             if BTrace.HitGroup == HITGROUP_HEAD then
@@ -206,9 +223,25 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
 
             if P > Range or Y > Range then
 
+                local Clamp = math.Clamp(math.floor((math.max(P,Y) + (Dist / 80)) / 25), 0, 4)
+                local Text = "Low"
+                if Clamp == 0 then Clamp = 1 end
+                if Clamp == 2 then Text = "Medium" end
+                if Clamp == 3 then Text = "High" end
+                if Clamp == 4 then Text = "Severe" end
+
+                timer.Simple(0,function()
+                    local TimerPAng = ply:EyeAngles()
+                    local PC = math.abs(subT(TimerPAng.p,Ang.p)) < 1.5
+                    local YC = math.abs(subT(TimerPAng.y,Ang.y)) < 1.5
+
+                    if PC and YC then
+                        KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Detected Snap Severity: " .. Text)
+                        pushTrigger(ply, "aimbot", Clamp)
+                    end
+                end)
                 timer.Simple(engine.TickInterval() * 4,function()
                     local TimerPAng = ply:EyeAngles()
-
                     local PC = math.abs(math.Round(subT(TimerPAng.p,PAng.p))) < (P / 10)
                     local YC = math.abs(math.Round(subT(TimerPAng.y,PAng.y))) < (Y / 10)
 
@@ -218,15 +251,9 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
                         pushTrigger(ply, "aimbot", 3)
                     end
                 end)
-                local Clamp = math.Clamp(math.floor((math.max(P,Y) + (Dist / 80)) / 25), 0, 4)
-                local Text = "Low"
-                if Clamp == 2 then Text = "Medium" end
-                if Clamp == 3 then Text = "High" end
-                if Clamp == 4 then Text = "Severe" end
-                //print("Range: " .. Range .. " | M: " .. math.max(P,Y) .. " | Div: " .. ((math.max(P,Y) + (Dist / 60)) / 30))
-                //KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Snap Detected d[" .. math.Round(Dist * 0.0625) .. "] p[" .. math.Round(P) .. "] y[" .. math.Round(Y) .. "]")
-                KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Detected Snap Severity: " .. Text)
-                pushTrigger(ply, "aimbot", Clamp)
+
+                --print("Range: " .. Range .. " | M: " .. math.max(P,Y) .. " | Div: " .. ((math.max(P,Y) + (Dist / 60)) / 30))
+                --KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Snap Detected d[" .. math.Round(Dist * 0.0625) .. "] p[" .. math.Round(P) .. "] y[" .. math.Round(Y) .. "]")
             end
         end
     end
