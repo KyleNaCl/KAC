@@ -1,7 +1,18 @@
 
 print("[KAC] \tLoaded sv_kac.lua")
 
-util.AddNetworkString("KAC_Client")
+timer.Simple(2, function()
+
+    util.AddNetworkString("KAC_Client")
+    if not FindMetaTable("Player").isBuild then
+        util.AddNetworkString("KAC_Killfeed")
+
+        hook.Add("GetFallDamage", "KAC_FallRealDamage", function(ply,speed)
+            return math.max(0, math.ceil(0.2418 * speed - 141.75))
+        end)
+    end
+
+end)
 
 local CollisionsMinCVAR = CreateConVar("sv_kac_min_collisions", 100, 128, "prop over this amount will recieve a cooldown until they recieve a collisions check", 1, 10000)
 local CollisionsMaxCVAR = CreateConVar("sv_kac_max_collisions", 2500, 128, "prop over this amount will always have collisions with props disabled", 1, 10000)
@@ -137,7 +148,7 @@ function KAC.checkData(player_)
     local steamC = steam(player_)
     if not steamC then KAC.print2("[KAC] Error: steam() retuned nil in checkData() for " .. player_:Name()) return false end
     if not KAC[steamC] then
-        KAC[steamC] = { valid = true, button = { jump = -1 }, eyea = Angle(), bhop = 0, ground = false, headshot = 0, hitshot = 0, kill = 0, antispam = 0 }
+        KAC[steamC] = { valid = true, button = { jump = -1 }, eyea = Angle(), headshot = 0, hitshot = 0, kill = 0, antispam = 0 }
         KAC.print2("[KAC] Info: Creating: " .. player_:Name() .. ": Main Data table")
     end
     return steamC
@@ -207,6 +218,59 @@ local function updateTool(player_, tool, trace, hide)
 end
 
 hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
+
+    if not FindMetaTable("Player").isBuild then
+        local Att = attacker:GetClass()
+        local Text = inflictor:GetClass()
+        local Vic = victim:Nick()
+
+        --KAC.print2(tostring(attacker) .. " | " .. tostring(inflictor) .. " | " .. tostring(victim))
+
+        if attacker:IsValid() and inflictor:IsValid() and victim:IsValid() then
+            if attacker:IsPlayer() then Att = attacker:Nick() 
+            else attacker = KAC.owner(inflictor) if attacker != nil then Att = attacker:Nick() end end
+            if attacker:IsPlayer() and inflictor:IsPlayer() then 
+                inflictor = attacker:GetActiveWeapon()
+                if inflictor:IsValid() then Text = inflictor:GetClass() 
+                else Text = "Suicide" end
+            end
+
+            if inflictor:IsWeapon() then 
+                Text = inflictor:GetPrintName()
+                if Text == nil then Text = inflictor:GetClass() end
+            elseif inflictor:IsVehicle() then
+                if attacker:IsVehicle() then
+                    if attacker:GetDriver() then 
+                        Att = attacker:GetDriver():Nick()
+                    else 
+                        local Attt = KAC.owner(attacker)
+                        if Attt != nil then Att = Attt:Nick() end
+                    end
+                end
+                Text = inflictor:GetVehicleClass()
+                if Text == nil then Text = inflictor:GetClass() end
+            elseif inflictor:IsValid() and not inflictor:IsPlayer() then
+                if string.sub(Text,1,5) == "prop_" then
+                    Text = returnModel(inflictor:GetModel())
+                end
+                local Attt = KAC.owner(attacker)
+                if Attt != nil then
+                    Att = AttT:Nick()
+                end
+            end
+        elseif attacker:IsWorld() and inflictor:IsWorld() then
+            Att = "World"
+            Text = "Didn't Bounce"
+        end
+
+        Text = string.upper(Text)
+
+        net.Start("KAC_Killfeed")
+            net.WriteString(Att .. "%KAC%" .. Text .. "%KAC%" .. Vic)
+            net.WriteEntity(attacker)
+            net.WriteEntity(victim)
+        net.Broadcast()
+    end
 
     if IsValid(attacker) and IsValid(victim) then
 
