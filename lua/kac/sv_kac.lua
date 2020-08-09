@@ -1,10 +1,20 @@
 
 print("[KAC] \tLoaded sv_kac.lua")
 
-timer.Simple(2, function()
+util.AddNetworkString("KAC_Settings")
+util.AddNetworkString("KAC_Client")
 
-    util.AddNetworkString("KAC_Client")
-    if not FindMetaTable("Player").isBuild then
+timer.Simple(2, function()
+    if player.GetCount() > 0 then
+        net.Start("KAC_Settings")
+            net.WriteBool(KACSettings.CustomKillfeed)
+            net.WriteColor(KACSettings.KACCol)
+            net.WriteColor(KACSettings.TextSep)
+            net.WriteColor(KACSettings.TextCol)
+        net.Broadcast()
+    end
+
+    if KACSettings.CustomKillfeed == true then
         util.AddNetworkString("KAC_Killfeed")
 
         hook.Add("GetFallDamage", "KAC_FallRealDamage", function(ply,speed)
@@ -259,17 +269,19 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                 end
             end
         elseif attacker:IsWorld() and inflictor:IsWorld() then
-            Att = "World"
+            Att = " "
             Text = "Didn't Bounce"
         end
 
-        Text = string.upper(Text)
+        if KACSettings.CustomKillfeed == true then
+            Text = string.upper(Text)
 
-        net.Start("KAC_Killfeed")
-            net.WriteString(Att .. "%KAC%" .. Text .. "%KAC%" .. Vic)
-            net.WriteEntity(attacker)
-            net.WriteEntity(victim)
-        net.Broadcast()
+            net.Start("KAC_Killfeed")
+                net.WriteString(Att .. "%KAC%" .. Text .. "%KAC%" .. Vic)
+                net.WriteEntity(attacker)
+                net.WriteEntity(victim)
+            net.Broadcast()
+        end
     end
 
     if IsValid(attacker) and IsValid(victim) then
@@ -358,6 +370,13 @@ end)
 hook.Add("PlayerAuthed", "KAC_Auth", function(ply, steamid, uniqueid)
     local name = ply:Name()
     KAC.print2("[KAC] Info: " .. ply:Name() .. " <" .. steamid .. "><" .. ply:IPAddress() .. "> connected to the server")
+
+    net.Start("KAC_Settings")
+        net.WriteBool(KACSettings.CustomKillfeed)
+        net.WriteVector(Vector(KACSettings.KACCol[1],KACSettings.KACCol[2],KACSettings.KACCol[3]))
+        net.WriteVector(Vector(KACSettings.TextSep[1],KACSettings.TextSep[2],KACSettings.TextSep[3]))
+        net.WriteVector(Vector(KACSettings.TextCol[1],KACSettings.TextCol[2],KACSettings.TextCol[3]))
+    net.Send(ply)
 end)
 
 local function collisionCount(ent)
@@ -730,7 +749,12 @@ hook.Add("PlayerSay", "KAC_Chat", function(ply, text, isTeam)
                         end
                     elseif a[2] == "sv" then
                         if ply:IsSuperAdmin() then
-                            if a[4] != "" then
+                            if a[3] == "reload" then
+                                KAC.printClient(ply:UserID(), -3, "KAC Refresh Initalized")
+                                timer.Simple(2,function()
+                                    KACReload()
+                                end)
+                            elseif a[4] != "" then
                                 local Num = tonumber(a[4])
                                 if a[3] == "prop" then
                                     if Num > PropLooperTimerCVAR:GetMin() and Num < PropLooperTimerCVAR:GetMax() then
