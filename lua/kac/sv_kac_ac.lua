@@ -47,7 +47,7 @@ local function loopDelta()
             checkType(ply,"bhop")
             checkType(ply,"autoshoot")
         end
-        if not FindMetaTable("Player").isBuild then
+        if KACSettings.InfiniteReserves == true then
             weapon = ply:GetActiveWeapon()
             if IsValid(weapon) then
 
