@@ -159,9 +159,9 @@ end)
 hook.Add("EntityFireBullets", "KAC_Bullet", function(ent, dataTab)
     local ply = dataTab["Attacker"]
     local steamC = KAC.checkData(ply)
-    if KAC[steamC] and ply:Alive() then
-        if KAC[steamC].button["attack"] == 0 and ply:GetActiveWeapon():GetClass() != "weapon_shotgun" then
-            pushTrigger(ply, "autoshoot", 3)
+    if KAC[steamC] and ply:Alive() and ply:GetActiveWeapon() then
+        if KAC[steamC].button["attack"] != 1 and ply:GetActiveWeapon():GetClass() != "weapon_shotgun" then
+            pushTrigger(ply, "autoshoot", 5)
         end
     end
 end)
@@ -192,7 +192,7 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
         if infl:IsPlayer() then
             infl = infl:GetActiveWeapon()
             if infl:IsWeapon() then
-                if KAC[steamC].button["attack"] == -1 and KACTriggers["autoshoot"][steamC] == 0 then
+                if KAC[steamC].button["attack"] != 1 and KACTriggers["autoshoot"][steamC] == 0 then
                     KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Detected Autoshoot")
                     pushTrigger(ply, "aimbot", 1)
                 end
