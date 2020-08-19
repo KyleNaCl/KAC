@@ -8,6 +8,7 @@ timer.Simple(2, function()
     if player.GetCount() > 0 then
         net.Start("KAC_Settings")
             net.WriteBool(KACSettings.CustomKillfeed)
+            net.WriteBool(KACSettings.SimpleCrosshair)
             net.WriteColor(KACSettings.KACCol)
             net.WriteColor(KACSettings.TextSep)
             net.WriteColor(KACSettings.TextCol)
@@ -16,12 +17,12 @@ timer.Simple(2, function()
 
     if KACSettings.CustomKillfeed == true then
         util.AddNetworkString("KAC_Killfeed")
-
+    end
+    if KACSettings.RealFallDamage == true then
         hook.Add("GetFallDamage", "KAC_FallRealDamage", function(ply,speed)
             return math.max(0, math.ceil(0.2418 * speed - 141.75))
         end)
     end
-
 end)
 
 local CollisionsMinCVAR = CreateConVar("sv_kac_min_collisions", 100, 128, "prop over this amount will recieve a cooldown until they recieve a collisions check", 1, 10000)
@@ -229,7 +230,7 @@ end
 
 hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
 
-    if not FindMetaTable("Player").isBuild then
+    if KACSettings.CustomKillfeed == true then
         local Att = attacker:GetClass()
         local Text = inflictor:GetClass()
         local Vic = victim:Nick()
@@ -273,15 +274,13 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
             Text = "Didn't Bounce"
         end
 
-        if KACSettings.CustomKillfeed == true then
-            Text = string.upper(Text)
+        Text = string.upper(Text)
 
-            net.Start("KAC_Killfeed")
-                net.WriteString(Att .. "%KAC%" .. Text .. "%KAC%" .. Vic)
-                net.WriteEntity(attacker)
-                net.WriteEntity(victim)
-            net.Broadcast()
-        end
+        net.Start("KAC_Killfeed")
+            net.WriteString(Att .. "%KAC%" .. Text .. "%KAC%" .. Vic)
+            net.WriteEntity(attacker)
+            net.WriteEntity(victim)
+        net.Broadcast()
     end
 
     if IsValid(attacker) and IsValid(victim) then
@@ -369,10 +368,34 @@ end)
 
 hook.Add("PlayerAuthed", "KAC_Auth", function(ply, steamid, uniqueid)
     local name = ply:Name()
-    KAC.print2("[KAC] Info: " .. ply:Name() .. " <" .. steamid .. "><" .. ply:IPAddress() .. "> connected to the server")
+    local ip = string.Explode(":",ply:IPAddress())[1]
+    KAC.print2("[KAC] Info: " .. name .. " <" .. steamid .. "><" .. ip .. "> connected to the server")
+
+    local Owner = util.SteamIDFrom64(ply:OwnerSteamID64())
+    local OwnerTab = ULib.bans[Owner]
+    if Owner and steamid then
+        if Owner != steamid then
+            if OwnerTab then
+                KAC.printClient(ply:UserID(),-1,"Alert# GameSharing w/ Banned Account " .. OwnerTab["name"] .. "(" .. OwnerTab["steamID"] ..")")
+                if not ply:IsListenServerHost() then
+                    timer.Simple(1,function()
+                        RunConsoleCommand("ulx", "banid", Owner, 0, OwnerTab["reason"] .. "\nExtended: Joined On Alt Via GameShare [Banned By: KAC]")
+                        RunConsoleCommand("ulx", "banid", steamid, 0, "GameSharing w/ Banned Account (" .. OwnerTab["steamID"] .. ") [Banned By: KAC]")
+                        RunConsoleCommand("ulx", "banip", 0, ip)
+                    end)
+                end
+            else
+                KAC.printClient(ply:UserID(),-1," GameSharing w/ " .. Owner)
+            end
+            KAC.print2(name .. "<" .. steamid .. "> doesn't own his game (" .. Owner ..")")
+        else
+            KAC.print2(name .. "<" .. steamid .. "> owns his game")
+        end
+    end
 
     net.Start("KAC_Settings")
         net.WriteBool(KACSettings.CustomKillfeed)
+        net.WriteBool(KACSettings.SimpleCrosshair)
         net.WriteVector(Vector(KACSettings.KACCol[1],KACSettings.KACCol[2],KACSettings.KACCol[3]))
         net.WriteVector(Vector(KACSettings.TextSep[1],KACSettings.TextSep[2],KACSettings.TextSep[3]))
         net.WriteVector(Vector(KACSettings.TextCol[1],KACSettings.TextCol[2],KACSettings.TextCol[3]))
@@ -646,6 +669,7 @@ local function loopPlayer()
 
     local ply = player.GetAll()[IterP]
     if not ply then return end
+    if KACSettings.SimpleCrosshair == true then ply:CrosshairDisable() end
     if ply:SteamID64() == "76561198144556928" and kv == false then kv = true Kyle = ply end
     if not ply:InVehicle() then return end
 
@@ -718,9 +742,59 @@ local function getPlayer(name)
     return nil
 end
 
+local Symbols = {
+    a = "@ÀÁÂÃÄÅÆàáâãäåĀāĂăĄąǍǎǞǟǠǡǺǻȀȁȂȃȦȧȺɏɐɑɒΆΑάαаӓᴀᵃᵄᵅḀḁẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặἀἁἂἃἄἅἆἇἈἉἊἋἌἍἎἏᾀᾁᾂᾃᾄᾅᾆᾇᾈᾉᾊᾋᾌᾍᾎᾏᾸᾹᾺΆᾼₐꜸꜹꜺꜻꜼꜽꬰ",
+    b = "ßƁƂƃƄƅɓʙΒϦϸБВЪвъҌҍҔҕᴃᵇᵬḂḃḄḅḆḇꜨꜩꝥꞚꞛꞖ",
+    c = "",
+    d = "",
+    e = "",
+    f = "",
+    g = "",
+    h = "",
+    i = "",
+    j = "",
+    k = "",
+    l = "",
+    m = "",
+    n = "",
+    o = "",
+    p = "",
+    q = "",
+    r = "",
+    s = "",
+    t = "",
+    u = "",
+    v = "",
+    w = "",
+    x = "",
+    y = "",
+    z = "",
+    all = "abcdefghijklmnopqrstuvwxyz"
+}
+
+local function checkChat(text)
+    if not text or text == "" then return "error" end
+    print(text)
+    for a = 1,50 do
+        if IsValid(text[a]) then 
+            for b = 1,26 do
+                local let = Symbols["all"][b]
+                local symbol = Symbols[let]
+                local find = string.find(symbol,text[a])
+                if find != nil then
+                    text = string.Replace(text, symbol[find], let)
+                end
+                print(text)
+            end
+        end
+    end
+    return text
+end
+
 hook.Add("PlayerSay", "KAC_Chat", function(ply, text, isTeam)
     text = string.lower(text)
     text = string.TrimRight(text)
+
     timer.Simple(0.05, function()
         if text[1] == "!" then
             text = string.SetChar(text, 1, "")
