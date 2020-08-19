@@ -53,6 +53,8 @@ function KACReload()
 	    },
 	    InfiniteReserves = true,
 	    CustomKillfeed = true,
+	    SimpleCrosshair = true,
+	    RealFallDamage = true,
 	    KACCol = Color(100,100,255),
 	    TextSep = Color(200,200,200),
 	    TextCol = Color(255,255,255)
