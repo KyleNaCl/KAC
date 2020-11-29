@@ -47,26 +47,6 @@ local function loopDelta()
             checkType(ply,"bhop")
             checkType(ply,"autoshoot")
         end
-        if KACSettings.InfiniteReserves == true then
-            weapon = ply:GetActiveWeapon()
-            if IsValid(weapon) then
-
-                local maxClip = weapon:GetMaxClip1()
-                local primAmmoType = weapon:GetPrimaryAmmoType()
-
-                if maxClip == -1 then
-                    maxClip = 100
-                end
-
-                if maxClip <= 0 and primAmmoType ~= -1 then
-                    maxClip = 1
-                end
-
-                if primAmmoType ~= -1 then
-                    ply:SetAmmo( maxClip, primAmmoType, true)
-                end
-            end
-        end
     end
 end
 timer.Create("KAC_TriggerDelta", 1, 0, loopDelta)
@@ -138,9 +118,8 @@ hook.Add("OnPlayerHitGround", "KAC_Ground", function(ply, inWater, onFloater, sp
             if KAC[steamC].button.jump == -1 or ply:GetMoveType() == MOVETYPE_NOCLIP then return end
 
             local vel = ply:GetVelocity()
-            if math.abs(math.Round(vel[1]) + math.Round(vel[2])) <= 300 or math.Round(vel[3]) < 50 then return end
+            if math.abs(math.floor(vel[1]) + math.floor(vel[2])) <= 300 or math.floor(vel[3]) < 50 then return end
 
-            //KAC.print2("[KAC] Info: " .. ply:Name() .. "<" .. ply:SteamID() .. "> bhop detected [x " .. math.Round(vel[1]) .. ", y " .. math.Round(vel[2]) .."]")
             KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Detected BHOP Scripts")
             pushTrigger(ply, "bhop", 1)
         end)
@@ -160,7 +139,7 @@ hook.Add("EntityFireBullets", "KAC_Bullet", function(ent, dataTab)
     local ply = dataTab["Attacker"]
     local steamC = KAC.checkData(ply)
     if KAC[steamC] and ply:Alive() and ply:GetActiveWeapon() then
-        if KAC[steamC].button["attack"] != 1 and ply:GetActiveWeapon():GetClass() != "weapon_shotgun" then
+        if KAC[steamC].button["attack"] != 1 then
             pushTrigger(ply, "autoshoot", 5)
         end
     end
@@ -192,7 +171,7 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
         if infl:IsPlayer() then
             infl = infl:GetActiveWeapon()
             if infl:IsWeapon() then
-                if KAC[steamC].button["attack"] != 1 and KACTriggers["autoshoot"][steamC] == 0 then
+                if KAC[steamC].button["attack"] != 1 and KACTriggers["autoshoot"][steamC] == 0 and infl:GetClass() != "weapon_shotgun" then
                     KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Detected Autoshoot")
                     pushTrigger(ply, "aimbot", 1)
                 end
@@ -251,9 +230,7 @@ hook.Add("EntityTakeDamage", "KAC_Damage", function(ent, dmg)
                         pushTrigger(ply, "aimbot", 3)
                     end
                 end)
-
-                --print("Range: " .. Range .. " | M: " .. math.max(P,Y) .. " | Div: " .. ((math.max(P,Y) + (Dist / 60)) / 30))
-                --KAC.printClient(ply:UserID(), -1, "Anti-Cheat# Snap Detected d[" .. math.Round(Dist * 0.0625) .. "] p[" .. math.Round(P) .. "] y[" .. math.Round(Y) .. "]")
+                
             end
         end
     end
