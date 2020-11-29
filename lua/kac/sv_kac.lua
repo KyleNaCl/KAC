@@ -4,27 +4,6 @@ print("[KAC] \tLoaded sv_kac.lua")
 util.AddNetworkString("KAC_Settings")
 util.AddNetworkString("KAC_Client")
 
-timer.Simple(2, function()
-    if player.GetCount() > 0 then
-        net.Start("KAC_Settings")
-            net.WriteBool(KACSettings.CustomKillfeed)
-            net.WriteBool(KACSettings.SimpleCrosshair)
-            net.WriteColor(KACSettings.KACCol)
-            net.WriteColor(KACSettings.TextSep)
-            net.WriteColor(KACSettings.TextCol)
-        net.Broadcast()
-    end
-
-    if KACSettings.CustomKillfeed == true then
-        util.AddNetworkString("KAC_Killfeed")
-    end
-    if KACSettings.RealFallDamage == true then
-        hook.Add("GetFallDamage", "KAC_FallRealDamage", function(ply,speed)
-            return math.max(0, math.ceil(0.2418 * speed - 141.75))
-        end)
-    end
-end)
-
 local CollisionsMinCVAR = CreateConVar("sv_kac_min_collisions", 100, 128, "prop over this amount will recieve a cooldown until they recieve a collisions check", 1, 10000)
 local CollisionsMaxCVAR = CreateConVar("sv_kac_max_collisions", 2500, 128, "prop over this amount will always have collisions with props disabled", 1, 10000)
 local FadingDoorPenetrateMax = CreateConVar("sv_kac_max_fading_door_penetrate", 3, 128, "max amount of toggled fading doors penetrating together", 1, 100)
@@ -92,9 +71,9 @@ end
 
 function KAC.InBuild(ply)
     if not IsValid(ply) then return false end
+    if not ply:IsPlayer() then return false end
     local co = KAC.owner(ply)
     if IsValid(co) and co:IsPlayer() then ply = co end
-    if not ply:IsPlayer() then return false end
     if ply.isBuild then return ply:isBuild() end
     return false
 end
@@ -187,27 +166,20 @@ end
 
 local function updateTool(player_, tool, trace, hide)
     if not KACSettings then KAC.print2("[KAC] Error: KACSettings not loaded in updateTool()") return false end
-    
     if not KACSettings[tool] then return false end
-
     if not player_ then KAC.print2("[KAC] Error: Unknown Player: Failed updateTool() for " .. tool) return false end
-
     local Tab = validate(player_, tool)
     if not Tab then KAC.print2("[KAC] Error: " .. player_:Name() .. ": Data Table nil in updateTool()") return false end
 
     hide = hide or nil
 
     local aim = nil
-    if trace != nil then
-        aim = trace.entity
-    end
+    if trace != nil then aim = trace.entity end
     if KACSettings[tool].requireTrace == true and not aim then return false end
-
     if KACSettings[tool].threshold == 0 then return end
 
     for i = 1, KACSettings[tool].threshold - 1, 1 do Tab[tool][i] = Tab[tool][i+1] end -- Tool Push Back
     Tab[tool][KACSettings[tool].threshold] = CurTime()
-    --KAC.print2("Pushed: " .. player_:Name() .. "'s " .. tool .. " table -> " .. CurTime())
     if Tab[tool][1] != 0 then
         local trigger = math.Round(Tab[tool][KACSettings[tool].threshold] - Tab[tool][1],2)
         if trigger < KACSettings[tool].update then
@@ -228,60 +200,31 @@ local function updateTool(player_, tool, trace, hide)
     return Tab != nil
 end
 
-hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
-
-    if KACSettings.CustomKillfeed == true then
-        local Att = attacker:GetClass()
-        local Text = inflictor:GetClass()
-        local Vic = victim:Nick()
-
-        --KAC.print2(tostring(attacker) .. " | " .. tostring(inflictor) .. " | " .. tostring(victim))
-
-        if attacker:IsValid() and inflictor:IsValid() and victim:IsValid() then
-            if attacker:IsPlayer() then Att = attacker:Nick() 
-            else attacker = KAC.owner(inflictor) if attacker != nil then Att = attacker:Nick() end end
-            if attacker:IsPlayer() and inflictor:IsPlayer() then 
-                inflictor = attacker:GetActiveWeapon()
-                if inflictor:IsValid() then Text = inflictor:GetClass() 
-                else Text = "Suicide" end
-            end
-
-            if inflictor:IsWeapon() then 
-                Text = inflictor:GetPrintName()
-                if Text == nil then Text = inflictor:GetClass() end
-            elseif inflictor:IsVehicle() then
-                if attacker:IsVehicle() then
-                    if attacker:GetDriver() then 
-                        Att = attacker:GetDriver():Nick()
-                    else 
-                        local Attt = KAC.owner(attacker)
-                        if Attt != nil then Att = Attt:Nick() end
-                    end
-                end
-                Text = inflictor:GetVehicleClass()
-                if Text == nil then Text = inflictor:GetClass() end
-            elseif inflictor:IsValid() and not inflictor:IsPlayer() then
-                if string.sub(Text,1,5) == "prop_" then
-                    Text = returnModel(inflictor:GetModel())
-                end
-                local Attt = KAC.owner(attacker)
-                if Attt != nil then
-                    Att = AttT:Nick()
-                end
-            end
-        elseif attacker:IsWorld() and inflictor:IsWorld() then
-            Att = " "
-            Text = "Didn't Bounce"
-        end
-
-        Text = string.upper(Text)
-
-        net.Start("KAC_Killfeed")
-            net.WriteString(Att .. "%KAC%" .. Text .. "%KAC%" .. Vic)
-            net.WriteEntity(attacker)
-            net.WriteEntity(victim)
+timer.Simple(2, function()
+    if player.GetCount() > 0 then
+        net.Start("KAC_Settings")
+            net.WriteColor(KACSettings.KACCol)
+            net.WriteColor(KACSettings.TextSep)
+            net.WriteColor(KACSettings.TextCol)
         net.Broadcast()
     end
+
+    --[[
+    E2Helper.Descriptions["isInBuild"] = "Returns if player is in buildmode"
+
+    E2Lib.RegisterExtension("kac", true)
+
+    __e2setcost(2)
+
+    e2function void entity:isInBuild()
+		if not IsValid(this) then return false end
+		if not this:IsPlayer() then return false end
+		return KAC.InBuild(this)
+	end
+    ]]
+end)
+
+hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
 
     if IsValid(attacker) and IsValid(victim) then
 
@@ -320,13 +263,13 @@ hook.Add("PlayerDeath", "KAC_Death", function(victim, inflictor, attacker)
                                 HideBuild = true
                                 if Driver == attacker then 
                                     KAC.printClient(TargetID, VictimID, "ran over#using '" .. model .. "' while in Buildmode")
-                                else 
+                                else
                                     KAC.printClient(Driver:UserID(), VictimID, "ran over#using " .. (owner(inflictor):Name()) .. "'s '" .. model .. "' while in Buildmode")
                                 end
                             end
                         end
                     else
-                        KAC.printClient(TargetID, VictimID, "vehicle propkilled killed#using '" .. model .. "'", true)
+                        KAC.printClient(TargetID, VictimID, "vehicle propkilled#using '" .. model .. "'", true)
                     end
                 elseif Weap == "prop_physics" or inflictor:IsRagdoll() then
                     local Type = "propkilled"
@@ -371,34 +314,36 @@ hook.Add("PlayerAuthed", "KAC_Auth", function(ply, steamid, uniqueid)
     local ip = string.Explode(":",ply:IPAddress())[1]
     KAC.print2("[KAC] Info: " .. name .. " <" .. steamid .. "><" .. ip .. "> connected to the server")
 
-    local Owner = util.SteamIDFrom64(ply:OwnerSteamID64())
-    local OwnerTab = ULib.bans[Owner]
-    if Owner and steamid then
-        if Owner != steamid then
-            if OwnerTab then
-                KAC.printClient(ply:UserID(),-1,"Alert# GameSharing w/ Banned Account " .. OwnerTab["name"] .. "(" .. OwnerTab["steamID"] ..")")
-                if not ply:IsListenServerHost() then
-                    timer.Simple(1,function()
-                        RunConsoleCommand("ulx", "banid", Owner, 0, OwnerTab["reason"] .. "\nExtended: Joined On Alt Via GameShare [Banned By: KAC]")
-                        RunConsoleCommand("ulx", "banid", steamid, 0, "GameSharing w/ Banned Account (" .. OwnerTab["steamID"] .. ") [Banned By: KAC]")
-                        RunConsoleCommand("ulx", "banip", 0, ip)
-                    end)
+    if ply.OwnerSteamID64 then
+        local Owner = util.SteamIDFrom64(ply:OwnerSteamID64())
+        local OwnerTab = ULib.bans[Owner]
+        if Owner and steamid then
+            if Owner != steamid then
+                if OwnerTab then
+                    KAC.printClient(ply:UserID(),-1,"Alert# GameSharing w/ Banned Account " .. OwnerTab["name"] .. "(" .. OwnerTab["steamID"] ..")")
+                    if not ply:IsListenServerHost() then
+                        timer.Simple(1,function()
+                            RunConsoleCommand("ulx", "banid", Owner, 0, OwnerTab["reason"] .. "\n - Extended: Joined On Alt Via GameShare [Banned By: KAC]")
+                            RunConsoleCommand("ulx", "banid", steamid, 0, "GameSharing w/ Banned Account (" .. OwnerTab["steamID"] .. ") [Banned By: KAC]")
+                            RunConsoleCommand("ulx", "banip", 0, ip)
+                        end)
+                    end
+                else
+                    KAC.printClient(ply:UserID(),-1,"GameSharing w/ " .. Owner)
                 end
+                KAC.print2("[KAC] Info: " .. name .. " <" .. steamid .. "> doesn't own their game (" .. Owner ..")")
             else
-                KAC.printClient(ply:UserID(),-1," GameSharing w/ " .. Owner)
+                KAC.print2("[KAC] Info: " .. name .. " <" .. steamid .. "> owns their game")
             end
-            KAC.print2(name .. "<" .. steamid .. "> doesn't own his game (" .. Owner ..")")
-        else
-            KAC.print2(name .. "<" .. steamid .. "> owns his game")
         end
     end
 
     net.Start("KAC_Settings")
-        net.WriteBool(KACSettings.CustomKillfeed)
-        net.WriteBool(KACSettings.SimpleCrosshair)
-        net.WriteVector(Vector(KACSettings.KACCol[1],KACSettings.KACCol[2],KACSettings.KACCol[3]))
-        net.WriteVector(Vector(KACSettings.TextSep[1],KACSettings.TextSep[2],KACSettings.TextSep[3]))
-        net.WriteVector(Vector(KACSettings.TextCol[1],KACSettings.TextCol[2],KACSettings.TextCol[3]))
+        --net.WriteBool(KACSettings.CustomKillfeed)
+        --net.WriteBool(KACSettings.SimpleCrosshair)
+        net.WriteColor(KACSettings.KACCol)
+        net.WriteColor(KACSettings.TextSep)
+        net.WriteColor(KACSettings.TextCol)
     net.Send(ply)
 end)
 
@@ -497,13 +442,13 @@ local function checkPenetrate2(ply, ent)
     local THE2 = nil
 
     if IsValid(Trace1["Entity"]) then
-        TH1 = Trace1["Entity"]:GetClass() == "prop_physics" and not IsValid(Trace1["Entity"]:GetParent()) and isOwner(ply, Trace1["Entity"]) and collisionCount(Trace1["Entity"]) >= CollisionsMinCVAR:GetInt()
+        TH1 = Trace1["Entity"]:GetClass() == "prop_physics" and not IsValid(Trace1["Entity"]:GetParent()) and isOwner(ply, Trace1["Entity"]) and collisionCount(Trace1["Entity"]) >= CollisionsMinCVAR:GetInt() and Trace1["Entity"]:GetCollisionGroup() != COLLISION_GROUP_PLAYER
         if TH1 then
             THE1 = Trace1["Entity"]
         end
     end
     if IsValid(Trace2["Entity"]) then
-        TH2 = Trace2["Entity"]:GetClass() == "prop_physics" and not IsValid(Trace2["Entity"]:GetParent()) and isOwner(ply, Trace2["Entity"]) and collisionCount(Trace2["Entity"]) >= CollisionsMinCVAR:GetInt()
+        TH2 = Trace2["Entity"]:GetClass() == "prop_physics" and not IsValid(Trace2["Entity"]:GetParent()) and isOwner(ply, Trace2["Entity"]) and collisionCount(Trace2["Entity"]) >= CollisionsMinCVAR:GetInt() and Trace2["Entity"]:GetCollisionGroup() != COLLISION_GROUP_PLAYER
         if TH2 then
             THE2 = Trace2["Entity"]
         end
@@ -587,15 +532,10 @@ hook.Add("PlayerSpawnedSENT", "KAC_SpawnSENT", function(ply, ent)
     ent:SetCollisionGroup(COLLISION_GROUP_INTERACTIVE_DEBRIS)
 end)
 
-
 local Props = {}
 local Iter = 0
 local IterC = 0
 local IterCooldown = 10
-
-local Unlock = {}
-local UnlockAdmin = 0
-local UnlockTarget = 0
 
 local function loopProps()
     if IterC > 0 then IterC = IterC - 0.04 return end
@@ -684,30 +624,29 @@ local function loopPlayer()
 end
 timer.Create("KAC_VehicleLooper", VehicleLooperTimerCVAR:GetFloat(), 0, loopPlayer)
 
-local function rec(admin, ply)
-   local max = table.Count(Unlock)
-   if max > 0 then
-        local ent = Unlock[1]
+local function rec(admin, ply, unlockTable)
+    if not admin:IsValid() and ply:IsValid() then KAC.printClient(ply:UserID(),-1,"Error# Prop Unlock Failed Due to Missing Admin") return end
+    if admin:IsValid() and not ply:IsValid() then KAC.printClient(admin:UserID(),-1,"Error# Prop Unlock Failed Due to Missing Player") return end
+    if not admin:IsValid() and not ply:IsValid() then return end
+    if table.Count(unlockTable) > 0 then
+        local ent = unlockTable[1]
         if IsValid(ent) then
-            if c == COLLISION_GROUP_NPC_SCRIPTED then
+            if ent:GetCollisionGroup() == COLLISION_GROUP_NPC_SCRIPTED then
                 ent:SetCollisionGroup(COLLISION_GROUP_PLAYER)
-                KAC.print2("[KAC] Info: " .. Player(UnlockAdmin):Name() .. " approving [" .. tostring(ent) .. "] for " .. Player(UnlockTarget):Name())
+                KAC.print2("[KAC] Info: " .. admin:Name() .. " approving [" .. tostring(ent) .. "] for " .. ply:Name())
             end
         end
-        table.remove(Unlock, 1)
+        table.remove(unlockTable, 1)
         timer.Simple(ApprovalTimerCVAR:GetFloat(), function()
-            rec(admin, ply)
+            rec(admin, ply, unlockTable)
         end)
     else
-        KAC.printClient(admin, ply, "Prop Unlock Completed For#", true)
-        Unlock = {}
-        UnlockAdmin = 0
-        UnlockTarget = 0
+        KAC.printClient(admin:UserID(), ply:UserID(), "Prop Unlock Completed For#", true)
     end
 end
 
-local function unlock(admin, ply)
-    if UnlockAdmin != 0 then KAC.printClient(admin:UserID(), -1, "Approval Denied: Another Approval in Progress") return end
+local function unlock(admin, ply, unlockTable)
+    if not admin:IsPlayer() then return end
     if not ply:IsPlayer() then return end
     if table.Count(Props) > 0 then
         local push = {}
@@ -721,10 +660,7 @@ local function unlock(admin, ply)
            KAC.printClient(admin:UserID(), ply:UserID(), "Approval Denied: No Props Detected for#", true)
         else
             KAC.printClient(admin:UserID(), ply:UserID(), "Processing Prop Unlock Request For#", true)
-            Unlock = push
-            UnlockAdmin = admin:UserID()
-            UnlockTarget = ply:UserID()
-            rec(UnlockAdmin, UnlockTarget)
+            rec(admin, ply, push)
         end
     else
         KAC.printClient(admin:UserID(), -1, "Approval Denied: No Props on Map")
@@ -742,144 +678,141 @@ local function getPlayer(name)
     return nil
 end
 
-local Symbols = {
-    a = "@ÀÁÂÃÄÅÆàáâãäåĀāĂăĄąǍǎǞǟǠǡǺǻȀȁȂȃȦȧȺɏɐɑɒΆΑάαаӓᴀᵃᵄᵅḀḁẢảẤấẦầẨẩẪẫẬậẮắẰằẲẳẴẵẶặἀἁἂἃἄἅἆἇἈἉἊἋἌἍἎἏᾀᾁᾂᾃᾄᾅᾆᾇᾈᾉᾊᾋᾌᾍᾎᾏᾸᾹᾺΆᾼₐꜸꜹꜺꜻꜼꜽꬰ",
-    b = "ßƁƂƃƄƅɓʙΒϦϸБВЪвъҌҍҔҕᴃᵇᵬḂḃḄḅḆḇꜨꜩꝥꞚꞛꞖ",
-    c = "",
-    d = "",
-    e = "",
-    f = "",
-    g = "",
-    h = "",
-    i = "",
-    j = "",
-    k = "",
-    l = "",
-    m = "",
-    n = "",
-    o = "",
-    p = "",
-    q = "",
-    r = "",
-    s = "",
-    t = "",
-    u = "",
-    v = "",
-    w = "",
-    x = "",
-    y = "",
-    z = "",
-    all = "abcdefghijklmnopqrstuvwxyz"
-}
-
-local function checkChat(text)
-    if not text or text == "" then return "error" end
-    print(text)
-    for a = 1,50 do
-        if IsValid(text[a]) then 
-            for b = 1,26 do
-                local let = Symbols["all"][b]
-                local symbol = Symbols[let]
-                local find = string.find(symbol,text[a])
-                if find != nil then
-                    text = string.Replace(text, symbol[find], let)
-                end
-                print(text)
-            end
-        end
-    end
-    return text
-end
-
 hook.Add("PlayerSay", "KAC_Chat", function(ply, text, isTeam)
     text = string.lower(text)
     text = string.TrimRight(text)
 
-    timer.Simple(0.05, function()
-        if text[1] == "!" then
-            text = string.SetChar(text, 1, "")
-            local a = string.Explode(" ", text)
-            if a[1] == "kac" then
-                if ply:IsAdmin() then
-                    if a[2] == "approve" then
-                        local target = getPlayer(a[3])
-                        if target then
-                            unlock(ply, target)
-                        else
-                            KAC.printClient(ply:UserID(), -4, "Player Not Found [" .. a[3] .."]")
-                        end
-                    elseif a[2] == "s" then
-                        if LastTrigger != 0 and IsValid(Player(LastTrigger)) then
-                            RunConsoleCommand("ulx", "send", ply:Name(), Player(LastTrigger):Name())
-                        else
-                            KAC.printClient(ply:UserID(), -4, "Player Not Found")
-                        end
-                    elseif a[2] == "info" then
-                        if ply:IsSuperAdmin() then
-                            local te = "Info: \n\tcMin - " .. CollisionsMinCVAR:GetInt() .. "\n\tcMax - " .. CollisionsMaxCVAR:GetInt() .. "\n\tpropTimer - " .. math.Round(PropLooperTimerCVAR:GetFloat(), 2) .. "\n\tvehicleTimer - " .. math.Round(VehicleLooperTimerCVAR:GetFloat(), 2)
-                            KAC.printClient(ply:UserID(), -1, te)
-                        else
-                            KAC.printClient(ply:UserID(), -4, "Insufficient Permissions")
-                        end
-                    elseif a[2] == "sv" then
-                        if ply:IsSuperAdmin() then
-                            if a[3] == "reload" then
-                                KAC.printClient(ply:UserID(), -3, "KAC Refresh Initalized")
-                                timer.Simple(2,function()
-                                    KACReload()
-                                end)
-                            elseif a[4] != "" then
-                                local Num = tonumber(a[4])
-                                if a[3] == "prop" then
-                                    if Num > PropLooperTimerCVAR:GetMin() and Num < PropLooperTimerCVAR:GetMax() then
-                                        local Pre = math.Round(PropLooperTimerCVAR:GetFloat(), 2)
-                                        PropLooperTimerCVAR:SetFloat(math.Round(Num, 2))
-                                        timer.Adjust("PropLooper", Num, 0, loopProps)
-                                        KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_proplooper_timer' from '" .. Pre .. "' to '" .. Num .. "'")
-                                    end
-                                elseif a[3] == "vehicle" then
-                                    if Num > VehicleLooperTimerCVAR:GetMin() and Num < VehicleLooperTimerCVAR:GetMax() then
-                                        local Pre = math.Round(VehicleLooperTimerCVAR:GetFloat(), 2)
-                                        VehicleLooperTimerCVAR:SetFloat(math.Round(Num, 2))
-                                        timer.Adjust("VehicleLooper", Num, 0, loopPlayer)
-                                        KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_vehiclelooper_timer' from: '" .. Pre .. "' to '" .. Num .. "'")
-                                    end
-                                elseif a[3] == "approve" then
-                                    if Num > ApprovalTimerCVAR:GetMin() and Num < ApprovalTimerCVAR:GetMax() then
-                                        local Pre = math.Round(ApprovalTimerCVAR:GetFloat(), 2)
-                                        ApprovalTimerCVAR:SetFloat(math.Round(Num, 2))
-                                        KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_approval_timer' from: '" .. Pre .. "' to '" .. Num .. "'")
-                                    end
-                                elseif a[3] == "min" then
-                                    if Num > CollisionsMinCVAR:GetMin() and Num < CollisionsMinCVAR:GetMax() then
-                                        local Pre = CollisionsMinCVAR:GetInt()
-                                        CollisionsMinCVAR:SetInt(Num)
-                                        KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_min_collisions' from: '" .. Pre .. "' to '" .. Num .. "'")
-                                    end
-                                elseif a[3] == "max" then
-                                    if Num > CollisionsMaxCVAR:GetMin() and Num < CollisionsMaxCVAR:GetMax() then
-                                        local Pre = CollisionsMaxCVAR:GetInt()
-                                        CollisionsMaxCVAR:SetInt(Num)
-                                        KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_max_collisions' from: '" .. Pre .. "' to '" .. Num .. "'")
-                                    end
-                                elseif a[3] == "timer" then
-                                    if a[4] == "stop" then
-                                        timer.Pause("KAC_PropLooper")
-                                        KAC.printClient(ply:UserID(), -1, "paused 'PropLooper' timer")
-                                    elseif a[4] == "start" then
-                                        timer.UnPause("KAC_PropLooper")
-                                        KAC.printClient(ply:UserID(), -1, "unpaused 'PropLooper' timer")
-                                    end
-                                end
+    if text[1] == "!" then
+        text = string.SetChar(text, 1, "")
+        local a = string.Explode(" ", text)
+        if a[1] == "kac" then
+        	if a[2] == "approve" then
+            if ULib.ucl.query(ply, "kac_approve") then
+                KAC.printClient(ply:UserID(), -1, "(Silent)## !" .. text)
+                timer.Simple(0.05, function()
+					local target = getPlayer(a[3])
+                    if target then
+                        unlock(ply, target)
+                    else
+                        KAC.printClient(ply:UserID(), -4, "Player Not Found [" .. a[3] .."]")
+                    end
+                end)
+                return false
+            else
+                KAC.printClient(ply:UserID(), -4, "Error# Insufficient Permissions: !" .. text)
+                KAC.printClient(ply:UserID(), -1, "Error# Insufficient Permissions: !" .. text)
+                return false
+            end
+        	elseif a[2] == "s" then
+            if ULib.ucl.query(ply, "kac_send") then
+                KAC.printClient(ply:UserID(), -1, "(Silent)## !" .. text)
+                timer.Simple(0.05, function()
+					if LastTrigger != 0 and IsValid(Player(LastTrigger)) then
+                        RunConsoleCommand("ulx", "send", ply:Name(), Player(LastTrigger):Name())
+                    else
+                        KAC.printClient(ply:UserID(), -4, "Player Not Found")
+                    end
+                end)
+                return false
+            else
+                KAC.printClient(ply:UserID(), -4, "Error# Insufficient Permissions: !" .. text)
+                KAC.printClient(ply:UserID(), -1, "Error# Insufficient Permissions: !" .. text)
+                return false
+            end
+            elseif a[2] == "info" then
+            if ULib.ucl.query(ply, "kac_sv_values") then
+                timer.Simple(0.05, function()
+                    local te = "Info: \n\tcMin - " .. CollisionsMinCVAR:GetInt() .. "\n\tcMax - " .. CollisionsMaxCVAR:GetInt() .. "\n\tpropTimer - " .. math.Round(PropLooperTimerCVAR:GetFloat(), 2) .. "\n\tvehicleTimer - " .. math.Round(VehicleLooperTimerCVAR:GetFloat(), 2)
+                    KAC.printClient(ply:UserID(), -1, te)
+                end)
+            else
+                KAC.printClient(ply:UserID(), -4, "Error# Insufficient Permissions: !" .. text)
+                KAC.printClient(ply:UserID(), -1, "Error# Insufficient Permissions: !" .. text)
+                return false
+            end
+        	elseif a[2] == "owner" then
+            if ULib.ucl.query(ply, "kac_check_owner") then
+                KAC.printClient(ply:UserID(), -1, "(Silent)## !" .. text)
+                timer.Simple(0.05, function()
+					local target = getPlayer(a[3])
+                    if target then
+                    	local Owner = util.SteamIDFrom64(target:OwnerSteamID64())
+                    	if Owner != target:SteamID() then
+                        	KAC.printClient(target:UserID(),-4,"GameSharing w/ " .. Owner)
+			            else
+			                KAC.printClient(target:UserID(),-4,"Owns their game")
+			            end
+                    else
+                        KAC.printClient(ply:UserID(), -4, "Player Not Found [" .. a[3] .."]")
+                    end
+                end)
+                return false
+            else
+                KAC.printClient(ply:UserID(), -4, "Error# Insufficient Permissions: !" .. text)
+                KAC.printClient(ply:UserID(), -1, "Error# Insufficient Permissions: !" .. text)
+                return false
+            end
+            elseif a[2] == "sv" then
+            if ULib.ucl.query(ply, "kac_sv_values") then
+                KAC.printClient(ply:UserID(), -1, "(Silent)## !" .. text)
+                timer.Simple(0.05, function()
+                    if a[3] == "reload" then
+                        KAC.printClient(ply:UserID(), -3, "KAC Refresh Initalized")
+                        timer.Simple(2,function()
+                            KACReload()
+                        end)
+                    elseif a[4] != "" then
+                        local Num = tonumber(a[4])
+                        if a[3] == "prop" then
+                            if Num > PropLooperTimerCVAR:GetMin() and Num < PropLooperTimerCVAR:GetMax() then
+                                local Pre = math.Round(PropLooperTimerCVAR:GetFloat(), 2)
+                                PropLooperTimerCVAR:SetFloat(math.Round(Num, 2))
+                                timer.Adjust("PropLooper", Num, 0, loopProps)
+                                KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_proplooper_timer' from '" .. Pre .. "' to '" .. Num .. "'")
                             end
-                        else
-                            KAC.printClient(ply:UserID(), -4, "Insufficient Permissions")
+                        elseif a[3] == "vehicle" then
+                            if Num > VehicleLooperTimerCVAR:GetMin() and Num < VehicleLooperTimerCVAR:GetMax() then
+                                local Pre = math.Round(VehicleLooperTimerCVAR:GetFloat(), 2)
+                                VehicleLooperTimerCVAR:SetFloat(math.Round(Num, 2))
+                                timer.Adjust("VehicleLooper", Num, 0, loopPlayer)
+                                KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_vehiclelooper_timer' from: '" .. Pre .. "' to '" .. Num .. "'")
+                            end
+                        elseif a[3] == "approve" then
+                            if Num > ApprovalTimerCVAR:GetMin() and Num < ApprovalTimerCVAR:GetMax() then
+                                local Pre = math.Round(ApprovalTimerCVAR:GetFloat(), 2)
+                                ApprovalTimerCVAR:SetFloat(math.Round(Num, 2))
+                                KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_approval_timer' from: '" .. Pre .. "' to '" .. Num .. "'")
+                            end
+                        elseif a[3] == "min" then
+                            if Num > CollisionsMinCVAR:GetMin() and Num < CollisionsMinCVAR:GetMax() then
+                                local Pre = CollisionsMinCVAR:GetInt()
+                                CollisionsMinCVAR:SetInt(Num)
+                                KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_min_collisions' from: '" .. Pre .. "' to '" .. Num .. "'")
+                            end
+                        elseif a[3] == "max" then
+                            if Num > CollisionsMaxCVAR:GetMin() and Num < CollisionsMaxCVAR:GetMax() then
+                                local Pre = CollisionsMaxCVAR:GetInt()
+                                CollisionsMaxCVAR:SetInt(Num)
+                                KAC.printClient(ply:UserID(), -1, "changed 'sv_kac_max_collisions' from: '" .. Pre .. "' to '" .. Num .. "'")
+                            end
+                        elseif a[3] == "timer" then
+                            if a[4] == "stop" then
+                                timer.Pause("KAC_PropLooper")
+                                KAC.printClient(ply:UserID(), -1, "paused 'PropLooper' timer")
+                            elseif a[4] == "start" then
+                                timer.UnPause("KAC_PropLooper")
+                                KAC.printClient(ply:UserID(), -1, "unpaused 'PropLooper' timer")
+                            end
                         end
                     end
-                else
-                    KAC.printClient(ply:UserID(), -4, "Insufficient Permissions")
-                end
+                end)
+                return false
+            else
+                KAC.printClient(ply:UserID(), -4, "Error# Insufficient Permissions: !" .. text)
+                KAC.printClient(ply:UserID(), -1, "Error# Insufficient Permissions: !" .. text)
+                return false
+            end
             end
         end
-    end)
+    end
 end)
