@@ -51,10 +51,6 @@ function KACReload()
 	    	requireTrace = false,
 	    	isTool = false
 	    },
-	    InfiniteReserves = true,
-	    CustomKillfeed = true,
-	    SimpleCrosshair = true,
-	    RealFallDamage = true,
 	    KACCol = Color(100,100,255),
 	    TextSep = Color(200,200,200),
 	    TextCol = Color(255,255,255)
@@ -71,6 +67,10 @@ function KACReload()
 		
 		if ULib ~= nil then
 			ULib.ucl.registerAccess("kac_notify", {"admin", "superadmin"}, "Allows users to see KAC notifications", "")
+			ULib.ucl.registerAccess("kac_approve", {"admin", "superadmin"}, "Enables collisions for player props", "")
+			ULib.ucl.registerAccess("kac_check_owner", {"operator", "admin", "superadmin"}, "Checks the owner of player's game", "")
+			ULib.ucl.registerAccess("kac_send", {"operator", "admin", "superadmin"}, "Allows user to go to last user to trigger a KAC message", "")
+			ULib.ucl.registerAccess("kac_sv_values", {"superadmin"}, "Edit KAC values", "")
 		end
 	elseif CLIENT then
 		print("[KAC] ======Initalize Client======")
