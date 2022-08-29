@@ -571,7 +571,7 @@ local Buttons = {
 }
 
 local AC_Whitelist = {
-    ["912179120"] = true --Katelyn.N<STEAM_0:0:456089560>
+    ["null"] = true
 }
 
 timer.Simple(3,function() -- Wait for WireLib to be mounted
