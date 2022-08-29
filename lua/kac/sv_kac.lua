@@ -356,7 +356,7 @@ hook.Add("player_connect", "KAC_Connect", function(data)
                     local lockdownvpn = AntiVPNCVAR:GetInt()
                     local vpnlock = UserLockDownBlacklist[tostring(lockdownvpn)][rank] or false
                     if UserTabBlacklist[rank] or vpnlock then
-                        local URL = "ip=" .. ip .. "&contact=kbarber1998@gmail.com"
+                        local URL = "ip=" .. ip .. "&contact=null"
                         http.Fetch("http://check.getipintel.net/check.php?" .. URL,
                             function(body, len, headers, code)
                                 body = math.floor(tonumber(body) * 100)
