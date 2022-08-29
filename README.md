@@ -8,6 +8,7 @@ Hazard addons: https://github.com/maxrr/hazard-addons
 
 # Includes
 Clientsides: HTTP link logs, steam profanity filter remover
+
 Serverside: Tool spam alerts; illegal player kills (propkills, godmode) alerts, logging & punishment system; VAC ban checker; VPN/Proxy Detection (please add your own email); Server Lockdown (anti-join); Gameshare ban checker; Propspawn collision checker/collision disabler; swep/sent/ragdoll collision disabler; anti-simfphys crash; mass weld/nocollide detection/remover; skeleton model highlighter; anti-chair nocollide all; wire expression2 high cpu usage detection/haulter; spray file name logger; aimbot detection (controller emulators cause false positives, wont fix); BHop detection; Exploit/Backdoor Net Detection; Net Message Rate Limiter; Custom Perma Gag; Parental Controls (player session time limiter per day); Log to file (data/kac_logs.txt) & BLogs integration; Tinnitus Remover; Auto Decal Cleanup; Seat Network Optimizer; Model Cache Limit Crash Prevention; Physics Speedlimit Raised; wire expression2 table crash prevention
 
 Modified Wiremod Expression2 Cores: Patched Streamcore, DamageCore w/ BLogs support, PlayerCore w/ BLogs support, Modified PropCore w/ KAC integration for prop spawns, Custom core for KAC functions which are used with Hazard's addons
