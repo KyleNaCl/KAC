@@ -15,8 +15,11 @@ Modified Wiremod Expression2 Cores: Patched Streamcore, DamageCore w/ BLogs supp
 
 # Modified Addons include
 ARCCW & TFA npc weapon menu removed
+
 TFA projectile weapons modified velocities for balance
+
 Simfphys lowered clientside particle timers
+
 WAC fixed particle lua errors
 
 # Reminder
